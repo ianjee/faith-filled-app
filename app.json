@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Therapist Portal",
+    "slug": "therapist-portal",
+    "scheme": "therapistportal",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"],
+    "plugins": ["expo-router"],
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.faithfilled.therapistportal" },
+    "android": { "package": "com.faithfilled.therapistportal" },
+    "extra": {
+      "router": { "origin": false }
+    }
+  }
+}
