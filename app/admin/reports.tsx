@@ -1,74 +1,86 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { Heading, Card, Label, COLORS } from "@/components/ui";
+import { Screen, Eyebrow, Heading, Card, StatCard, SecondaryButton, COLORS } from "@/components/ui";
 
-interface SurveyRow {
-  pain_before: number | null;
-  pain_after: number | null;
-  would_recommend: boolean | null;
+interface ReportMetrics {
+  avgPainImprovementPct: number | null;
+  surveyResponseCount: number;
+  wouldRecommendPct: number | null;
 }
 
 export default function AdminReports() {
   const { profile } = useAuth();
-  const [surveys, setSurveys] = useState<SurveyRow[]>([]);
+  const [metrics, setMetrics] = useState<ReportMetrics>({
+    avgPainImprovementPct: null,
+    surveyResponseCount: 0,
+    wouldRecommendPct: null,
+  });
 
   useEffect(() => {
     if (!profile?.clinic_id) return;
-    // Basic V1 report: RLS scopes this to surveys for clients in the admin's clinic.
+    // Table: surveys — RLS "surveys_admin_read" scopes to clients within this clinic.
     supabase
       .from("surveys")
       .select("pain_before, pain_after, would_recommend")
-      .then(({ data }) => setSurveys((data as SurveyRow[]) ?? []));
-  }, [profile]);
+      .then(({ data }) => {
+        const rows: Array<{
+          pain_before: number | null;
+          pain_after: number | null;
+          would_recommend: boolean | null;
+        }> = data ?? [];
+        const painRows = rows.filter(
+          (r): r is { pain_before: number; pain_after: number; would_recommend: boolean | null } =>
+            r.pain_before !== null && r.pain_after !== null && r.pain_before > 0
+        );
+        const avgPain = painRows.length
+          ? Math.round(
+              painRows.reduce((sum: number, r) => sum + ((r.pain_before - r.pain_after) / r.pain_before) * 100, 0) /
+                painRows.length
+            )
+          : null;
+        const recCount = rows.filter((r) => r.would_recommend === true).length;
+        const recPct = rows.length ? Math.round((recCount / rows.length) * 100) : null;
 
-  const withPain = surveys.filter((s) => s.pain_before != null && s.pain_after != null);
-  const avgImprovement =
-    withPain.length > 0
-      ? Math.round(
-          (withPain.reduce((sum, s) => sum + ((s.pain_before! - s.pain_after!) / s.pain_before!), 0) /
-            withPain.length) *
-            100
-        )
-      : null;
-
-  const recommendResponses = surveys.filter((s) => s.would_recommend != null);
-  const recommendRate =
-    recommendResponses.length > 0
-      ? Math.round(
-          (recommendResponses.filter((s) => s.would_recommend).length / recommendResponses.length) * 100
-        )
-      : null;
+        setMetrics({
+          avgPainImprovementPct: avgPain,
+          surveyResponseCount: rows.length,
+          wouldRecommendPct: recPct,
+        });
+      });
+  }, [profile?.clinic_id]);
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, backgroundColor: COLORS.cream, flexGrow: 1 }}>
-      <Heading>Reports</Heading>
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+        <Eyebrow>Clinic workspace</Eyebrow>
+        <Heading>Reports</Heading>
 
-      <Card>
-        <Label>Average pain improvement</Label>
-        <Text style={{ fontSize: 28, fontWeight: "700", color: COLORS.sageDeep }}>
-          {avgImprovement != null ? `${avgImprovement}%` : "—"}
-        </Text>
-        <Text style={{ color: COLORS.inkMid, marginTop: 4 }}>
-          Based on {withPain.length} survey response(s) with before/after pain scores.
-        </Text>
-      </Card>
+        <View style={{ flexDirection: "row", gap: 9, marginBottom: 14 }}>
+          <StatCard label="Survey Responses" value={metrics.surveyResponseCount} />
+          <StatCard
+            label="Avg Pain Improvement"
+            value={metrics.avgPainImprovementPct !== null ? `${metrics.avgPainImprovementPct}%` : "—"}
+          />
+          <StatCard
+            label="Would Recommend"
+            value={metrics.wouldRecommendPct !== null ? `${metrics.wouldRecommendPct}%` : "—"}
+          />
+        </View>
 
-      <Card>
-        <Label>Would recommend</Label>
-        <Text style={{ fontSize: 28, fontWeight: "700", color: COLORS.sageDeep }}>
-          {recommendRate != null ? `${recommendRate}%` : "—"}
-        </Text>
-        <Text style={{ color: COLORS.inkMid, marginTop: 4 }}>
-          Based on {recommendResponses.length} response(s).
-        </Text>
-      </Card>
+        <Card>
+          <Text style={{ color: COLORS.inkMid, lineHeight: 19 }}>
+            These figures come from client outcome surveys — pain before/after, and likelihood to
+            recommend — rather than a single star rating, matching the outcome-based approach in the
+            initial plan.
+          </Text>
+        </Card>
 
-      <Text style={{ color: COLORS.inkMid, fontSize: 11, marginTop: 10 }}>
-        Advanced reporting (per-therapist trends, charts over time) is a Version 2 feature —
-        see the roadmap.
-      </Text>
-    </ScrollView>
+        <View style={{ height: 4 }} />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
+      </ScrollView>
+    </Screen>
   );
 }

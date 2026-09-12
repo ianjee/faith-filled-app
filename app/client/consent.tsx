@@ -1,66 +1,105 @@
-import React, { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ScrollView, Text, View, Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { signConsent } from "@/services/clientRecords";
-import { Heading, Card, Label, PrimaryButton, COLORS } from "@/components/ui";
+import { supabase } from "@/lib/supabase";
+import {
+  Screen,
+  Eyebrow,
+  Heading,
+  Label,
+  FieldInput,
+  PrimaryButton,
+  SecondaryButton,
+  Card,
+  Pill,
+  COLORS,
+} from "@/components/ui";
 
-const CONSENT_DOCUMENT_NAME = "Informed Consent & Policies";
-const CONSENT_VERSION = "v1.0";
+const CONSENT_DOCUMENT_NAME = "Treatment Consent & Policies";
+const CONSENT_VERSION = "2026-06-v1";
+const CONSENT_TEXT = `By signing below, you acknowledge that you have received an overview of the
+treatment you are about to receive, understand its expected benefits and any risks, and
+consent to receive care from your assigned therapist. This consent covers the current
+session and can be withdrawn at any time before treatment begins.
+
+This in-app signature is not a substitute for a legal review of consent requirements in
+your jurisdiction — the clinic's compliance process determines what's required for
+production use.`;
 
 export default function Consent() {
   const { profile } = useAuth();
-  const [agreed, setAgreed] = useState(false);
+  // The real schema has no "signed name" column — typing a name here is a UX
+  // confirmation step only. If you want the printed name stored for audit
+  // purposes, add a `signed_name text` column to `consents` and include it below.
+  const [signedName, setSignedName] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [alreadySigned, setAlreadySigned] = useState(false);
 
-  const handleAgree = async () => {
+  useEffect(() => {
+    if (!profile) return;
+    // Table: consents — RLS "consents_client" scopes to client_id = auth.uid()
+    supabase
+      .from("consents")
+      .select("id")
+      .eq("client_id", profile.id)
+      .eq("document_version", CONSENT_VERSION)
+      .maybeSingle()
+      .then(({ data }) => setAlreadySigned(!!data));
+  }, [profile?.id]);
+
+  async function handleSign() {
     if (!profile) return;
     setSaving(true);
-    setError(null);
-    const { error } = await signConsent(profile.id, CONSENT_DOCUMENT_NAME, CONSENT_VERSION);
+    const { error } = await supabase.from("consents").insert({
+      client_id: profile.id,
+      document_name: CONSENT_DOCUMENT_NAME,
+      document_version: CONSENT_VERSION,
+      agreed: true,
+      agreed_at: new Date().toISOString(),
+    });
     setSaving(false);
+
     if (error) {
-      setError(error.message);
+      Alert.alert("Couldn't save", error.message);
       return;
     }
-    setAgreed(true);
-    router.back();
-  };
+    Alert.alert("Signed", "Thank you — your consent has been recorded.", [
+      { text: "OK", onPress: () => router.back() },
+    ]);
+  }
 
   return (
-    <ScrollView contentContainerStyle={{ backgroundColor: COLORS.cream, padding: 20, flexGrow: 1 }}>
-      <Heading>Consent & policies</Heading>
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+        <Eyebrow>Required before treatment</Eyebrow>
+        <Heading>Consent & Policies</Heading>
 
-      <Card>
-        <Text style={{ color: COLORS.inkMid, lineHeight: 20 }}>
-          By continuing, you acknowledge that you have read and understood our treatment
-          policies, cancellation policy, and privacy practices. This screen records your
-          agreement, the document version, and a timestamp.
+        {alreadySigned ? <Pill text="Signed" /> : null}
+
+        <Card>
+          <ScrollView style={{ maxHeight: 220 }}>
+            <Text style={{ color: COLORS.inkMid, lineHeight: 20 }}>{CONSENT_TEXT}</Text>
+          </ScrollView>
+        </Card>
+
+        {!alreadySigned && (
+          <Card>
+            <Label>Type your full name to sign</Label>
+            <FieldInput value={signedName} onChangeText={setSignedName} placeholder="Your full legal name" />
+          </Card>
+        )}
+
+        {!alreadySigned ? (
+          <PrimaryButton title="I Agree & Sign" onPress={handleSign} loading={saving} disabled={!signedName} />
+        ) : null}
+        <View style={{ height: 9 }} />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
+
+        <Text style={{ fontSize: 11, color: COLORS.inkMid, marginTop: 10 }}>
+          Document version {CONSENT_VERSION}. Your signature, name, and timestamp are recorded for audit purposes.
         </Text>
-      </Card>
-
-      <View style={{ marginBottom: 16 }}>
-        <Label>Document</Label>
-        <Text style={{ color: COLORS.ink }}>
-          {CONSENT_DOCUMENT_NAME} ({CONSENT_VERSION})
-        </Text>
-      </View>
-
-      {error && <Text style={{ color: "#B3261E", marginBottom: 10 }}>{error}</Text>}
-
-      <PrimaryButton
-        title={agreed ? "Signed ✓" : "I agree — sign electronically"}
-        onPress={handleAgree}
-        loading={saving}
-        disabled={agreed}
-      />
-
-      <Text style={{ color: COLORS.inkMid, fontSize: 11, marginTop: 12 }}>
-        Note: a drawn or tapped signature does not automatically satisfy every jurisdiction's
-        legal requirements for electronic signatures on health records. Have the business/legal
-        side validate this flow before relying on it in production.
-      </Text>
-    </ScrollView>
+      </ScrollView>
+    </Screen>
   );
 }

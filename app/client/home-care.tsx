@@ -1,43 +1,57 @@
 import React, { useEffect, useState } from "react";
-import { FlatList, Text } from "react-native";
+import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { getHomeCareForClient } from "@/services/clientRecords";
-import { Heading, Card, COLORS } from "@/components/ui";
-import type { HomeCareRecommendation } from "@/types/database.types";
+import { supabase } from "@/lib/supabase";
+import { Screen, Eyebrow, Heading, Card, SecondaryButton, COLORS } from "@/components/ui";
+
+interface HomeCareItem {
+  id: string;
+  instructions: string;
+  created_at: string;
+}
 
 export default function HomeCare() {
   const { profile } = useAuth();
-  const [items, setItems] = useState<HomeCareRecommendation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<HomeCareItem[]>([]);
 
   useEffect(() => {
     if (!profile) return;
-    getHomeCareForClient(profile.id).then(({ data }) => {
-      setItems(data ?? []);
-      setLoading(false);
-    });
-  }, [profile]);
+    // Table: home_care_recommendations — RLS "homecare_client" scopes to client_id = auth.uid()
+    supabase
+      .from("home_care_recommendations")
+      .select("*")
+      .eq("client_id", profile.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setItems((data as HomeCareItem[]) ?? []));
+  }, [profile?.id]);
 
   return (
-    <FlatList
-      style={{ backgroundColor: COLORS.cream }}
-      contentContainerStyle={{ padding: 20, flexGrow: 1 }}
-      ListHeaderComponent={<Heading>Home care recommendations</Heading>}
-      data={items}
-      keyExtractor={(item) => item.id}
-      ListEmptyComponent={
-        !loading ? (
-          <Text style={{ color: COLORS.inkMid }}>Nothing here yet — check back after your next session.</Text>
-        ) : null
-      }
-      renderItem={({ item }) => (
-        <Card>
-          <Text style={{ color: COLORS.ink }}>{item.instructions}</Text>
-          <Text style={{ color: COLORS.inkMid, fontSize: 11, marginTop: 6 }}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </Text>
-        </Card>
-      )}
-    />
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+        <Eyebrow>From your therapist</Eyebrow>
+        <Heading>Home Care Recommendations</Heading>
+
+        {items.length === 0 ? (
+          <Card>
+            <Text style={{ color: COLORS.inkMid, lineHeight: 19 }}>
+              Nothing here yet — your therapist will add recommendations after your next session.
+            </Text>
+          </Card>
+        ) : (
+          items.map((item) => (
+            <Card key={item.id}>
+              <Text style={{ color: COLORS.inkMid, lineHeight: 19, marginBottom: 6 }}>{item.instructions}</Text>
+              <Text style={{ fontSize: 11, color: COLORS.inkMid }}>
+                {new Date(item.created_at).toLocaleDateString()}
+              </Text>
+            </Card>
+          ))
+        )}
+
+        <View style={{ height: 4 }} />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
+      </ScrollView>
+    </Screen>
   );
 }

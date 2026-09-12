@@ -1,38 +1,74 @@
-import React from "react";
-import { ScrollView, Text } from "react-native";
+import React, { useEffect, useState } from "react";
+import { ScrollView, Text, View } from "react-native";
+import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { Heading, Card, Label, COLORS } from "@/components/ui";
+import { supabase } from "@/lib/supabase";
+import { Screen, Eyebrow, Heading, Card, SecondaryButton, COLORS } from "@/components/ui";
 
-export default function AdminSettings() {
+interface TherapistRow {
+  id: string;
+  full_name: string | null;
+  specialties: string[] | null;
+}
+
+export default function AdminTherapists() {
   const { profile } = useAuth();
+  const [therapists, setTherapists] = useState<TherapistRow[]>([]);
+
+  useEffect(() => {
+    if (!profile?.clinic_id) return;
+    // Two-step lookup avoids depending on exact FK constraint names for embeds:
+    // 1) therapists scoped to this clinic (RLS "therapists_admin"), 2) their profiles.
+    (async () => {
+      const clinicId = profile.clinic_id;
+      if (!clinicId) return;
+      const { data: therapistRows } = await supabase
+        .from("therapists")
+        .select("id, specialties")
+        .eq("clinic_id", clinicId);
+      const ids = (therapistRows ?? []).map((r) => r.id);
+      if (ids.length === 0) {
+        setTherapists([]);
+        return;
+      }
+      const { data: profileRows } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+      const nameById = new Map((profileRows ?? []).map((p) => [p.id, p.full_name]));
+      setTherapists(
+        (therapistRows ?? []).map((t) => ({
+          id: t.id,
+          full_name: nameById.get(t.id) ?? "Therapist",
+          specialties: t.specialties,
+        }))
+      );
+    })();
+  }, [profile?.clinic_id]);
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, backgroundColor: COLORS.cream, flexGrow: 1 }}>
-      <Heading>Settings</Heading>
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+        <Eyebrow>Clinic workspace</Eyebrow>
+        <Heading>Therapists</Heading>
 
-      <Card>
-        <Label>Signed in as</Label>
-        <Text style={{ color: COLORS.ink }}>{profile?.full_name}</Text>
-        <Text style={{ color: COLORS.inkMid, marginTop: 2 }}>Role: {profile?.role}</Text>
-      </Card>
+        {therapists.length === 0 ? (
+          <Card>
+            <Text style={{ color: COLORS.inkMid }}>No therapists on file yet.</Text>
+          </Card>
+        ) : (
+          therapists.map((t) => (
+            <Card key={t.id}>
+              <Text style={{ fontFamily: "Georgia", fontSize: 17, color: COLORS.ink, marginBottom: 4 }}>
+                {t.full_name}
+              </Text>
+              {t.specialties?.length ? (
+                <Text style={{ color: COLORS.inkMid, fontSize: 12 }}>{t.specialties.join(" · ")}</Text>
+              ) : null}
+            </Card>
+          ))
+        )}
 
-      <Card>
-        <Label>Managing users & permissions</Label>
-        <Text style={{ color: COLORS.inkMid, lineHeight: 20 }}>
-          In V1, elevate a user to therapist/admin by updating their row in the `profiles`
-          table (role + clinic_id) from the Supabase dashboard, or via a Supabase Edge
-          Function once you're ready to build an in-app invite flow.
-        </Text>
-      </Card>
-
-      <Card>
-        <Label>Data & compliance</Label>
-        <Text style={{ color: COLORS.inkMid, lineHeight: 20 }}>
-          This clinic's data is isolated by Row Level Security (see supabase/migrations).
-          Remember: the free Supabase tier is not HIPAA-enabled — confirm your compliance
-          plan before storing real client health data in production.
-        </Text>
-      </Card>
-    </ScrollView>
+        <View style={{ height: 4 }} />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
+      </ScrollView>
+    </Screen>
   );
 }

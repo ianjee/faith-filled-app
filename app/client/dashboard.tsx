@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
-import { Link } from "expo-router";
+import { ScrollView, Text, View, Pressable } from "react-native";
+import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { getUpcomingAppointmentsForClient } from "@/services/appointments";
 import { Screen, Eyebrow, Heading, Subheading, Card, Label, PrimaryButton, IconTile, COLORS } from "@/components/ui";
@@ -53,20 +53,26 @@ export default function ClientDashboard() {
 
         <Eyebrow>My wellness</Eyebrow>
         {menu.map((item) => (
-          <Link key={item.href} href={item.href as any} asChild>
-            <View>
-              <Card>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <IconTile icon={item.icon} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: "Georgia", fontSize: 17, color: COLORS.ink, marginBottom: 4 }}>{item.label}</Text>
-                    <Text style={{ color: COLORS.inkMid, fontSize: 12, lineHeight: 17 }}>{item.desc}</Text>
-                  </View>
-                  <Text style={{ color: COLORS.gold, fontSize: 22 }}>›</Text>
+          <Pressable
+            key={item.href}
+            onPress={() => router.push(item.href as any)}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.75 : 1,
+            })}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${item.label}`}
+          >
+            <Card>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <IconTile icon={item.icon} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: "Georgia", fontSize: 17, color: COLORS.ink, marginBottom: 4 }}>{item.label}</Text>
+                  <Text style={{ color: COLORS.inkMid, fontSize: 12, lineHeight: 17 }}>{item.desc}</Text>
                 </View>
-              </Card>
-            </View>
-          </Link>
+                <Text style={{ color: COLORS.gold, fontSize: 22 }}>›</Text>
+              </View>
+            </Card>
+          </Pressable>
         ))}
 
         <PrimaryButton title="Sign out" onPress={signOut} />

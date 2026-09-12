@@ -1,63 +1,86 @@
 import React, { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { ScrollView, Text, View, Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { submitIntakeForm } from "@/services/clientRecords";
-import { Heading, Label, FieldInput, PrimaryButton, COLORS } from "@/components/ui";
+import { db } from "@/lib/appDb";
+import {
+  Screen,
+  Eyebrow,
+  Heading,
+  Label,
+  FieldInput,
+  PrimaryButton,
+  SecondaryButton,
+  Card,
+  COLORS,
+} from "@/components/ui";
 
 export default function IntakeForm() {
   const { profile } = useAuth();
   const [reasonForVisit, setReasonForVisit] = useState("");
-  const [goals, setGoals] = useState("");
-  const [referredBy, setReferredBy] = useState("");
+  const [primaryConcerns, setPrimaryConcerns] = useState("");
+  const [medications, setMedications] = useState("");
+  const [allergies, setAllergies] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  async function handleSave() {
     if (!profile) return;
     setSaving(true);
-    setError(null);
-    const { error } = await submitIntakeForm(profile.id, {
-      reason_for_visit: reasonForVisit,
-      goals,
-      referred_by: referredBy,
+    // Table: intake_forms — RLS policy "intake_client_write" requires client_id = auth.uid().
+    // The real schema stores all answers in a single `responses` jsonb column
+    // rather than separate columns, so we shape the form fields into an object.
+    const { error } = await db.from("intake_forms").insert({
+      client_id: profile.id,
+      responses: {
+        reason_for_visit: reasonForVisit,
+        primary_concerns: primaryConcerns,
+        medications: medications || null,
+        allergies: allergies || null,
+      },
+      submitted_at: new Date().toISOString(),
     });
     setSaving(false);
+
     if (error) {
-      setError(error.message);
+      Alert.alert("Couldn't save", error.message);
       return;
     }
-    router.back();
-  };
+    Alert.alert("Saved", "Your intake form has been submitted.", [
+      { text: "OK", onPress: () => router.back() },
+    ]);
+  }
 
   return (
-    <ScrollView contentContainerStyle={{ backgroundColor: COLORS.cream, padding: 20, flexGrow: 1 }}>
-      <Heading>Intake form</Heading>
+    <Screen>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+        <Eyebrow>Before your session</Eyebrow>
+        <Heading>Intake Form</Heading>
 
-      <Label>What brings you in today?</Label>
-      <FieldInput
-        value={reasonForVisit}
-        onChangeText={setReasonForVisit}
-        multiline
-        numberOfLines={3}
-        placeholder="e.g. lower back tension, stress relief"
-      />
+        <Card>
+          <Label>Reason for visit</Label>
+          <FieldInput
+            value={reasonForVisit}
+            onChangeText={setReasonForVisit}
+            placeholder="e.g. lower back tension"
+            multiline
+          />
+          <Label>Primary concerns</Label>
+          <FieldInput
+            value={primaryConcerns}
+            onChangeText={setPrimaryConcerns}
+            placeholder="Anything you'd like your therapist to know"
+            multiline
+          />
+          <Label>Current medications (optional)</Label>
+          <FieldInput value={medications} onChangeText={setMedications} placeholder="e.g. ibuprofen as needed" />
+          <Label>Allergies (optional)</Label>
+          <FieldInput value={allergies} onChangeText={setAllergies} placeholder="e.g. lavender" />
+        </Card>
 
-      <Label>What are your goals for treatment?</Label>
-      <FieldInput
-        value={goals}
-        onChangeText={setGoals}
-        multiline
-        numberOfLines={3}
-        placeholder="e.g. reduce pain, improve mobility"
-      />
-
-      <Label>Referred by (optional)</Label>
-      <FieldInput value={referredBy} onChangeText={setReferredBy} placeholder="Doctor, friend, gym…" />
-
-      {error && <Text style={{ color: "#B3261E", marginBottom: 10 }}>{error}</Text>}
-
-      <PrimaryButton title="Submit intake form" onPress={handleSubmit} loading={saving} />
-    </ScrollView>
+        <PrimaryButton title="Submit Intake Form" onPress={handleSave} loading={saving} disabled={!reasonForVisit} />
+        <View style={{ height: 9 }} />
+        <SecondaryButton title="Cancel" onPress={() => router.back()} />
+      </ScrollView>
+    </Screen>
   );
 }
