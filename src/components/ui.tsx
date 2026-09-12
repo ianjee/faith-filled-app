@@ -9,32 +9,57 @@ import {
   View,
 } from "react-native";
 
+/** Faith-Filled Bodywork visual system.
+ * Warm ivory + muted sage + champagne gold, inspired by the website.
+ */
 export const COLORS = {
-  sageDeep: "#3E5C4E",
-  sage: "#6E8C7E",
-  sagePale: "#EEF3EC",
-  gold: "#B8946A",
-  ink: "#1E1E1C",
-  inkMid: "#4A4A47",
-  cream: "#FDFCFA",
-  white: "#FFFFFF",
-  border: "#E4E0D6",
+  sageDeep: "#6F7C63",
+  sage: "#8D967B",
+  sagePale: "#EEF0E8",
+  gold: "#B58A50",
+  goldPale: "#F4EBDD",
+  ink: "#2E302A",
+  inkMid: "#686961",
+  cream: "#F7F5EF",
+  white: "#FFFDF8",
+  border: "#E3DED2",
+  danger: "#A84A43",
 };
 
 export function Screen({ children }: { children: React.ReactNode }) {
   return <View style={styles.screen}>{children}</View>;
 }
 
-export function Card({ children }: { children: React.ReactNode }) {
-  return <View style={styles.card}>{children}</View>;
+export function BrandMark() {
+  return (
+    <View style={styles.brandWrap}>
+      <View style={styles.brandCircle}>
+        <Text style={styles.brandInitial}>F</Text>
+      </View>
+      <Text style={styles.brandName}>FAITH-FILLED</Text>
+      <Text style={styles.brandSub}>BODYWORK</Text>
+    </View>
+  );
+}
+
+export function Eyebrow({ children }: { children: React.ReactNode }) {
+  return <Text style={styles.eyebrow}>{children}</Text>;
 }
 
 export function Heading({ children }: { children: React.ReactNode }) {
   return <Text style={styles.heading}>{children}</Text>;
 }
 
+export function Subheading({ children }: { children: React.ReactNode }) {
+  return <Text style={styles.subheading}>{children}</Text>;
+}
+
 export function Label({ children }: { children: React.ReactNode }) {
   return <Text style={styles.label}>{children}</Text>;
+}
+
+export function Card({ children }: { children: React.ReactNode }) {
+  return <View style={styles.card}>{children}</View>;
 }
 
 export function FieldInput(props: TextInputProps) {
@@ -71,6 +96,14 @@ export function PrimaryButton({
   );
 }
 
+export function SecondaryButton({ title, onPress }: { title: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}>
+      <Text style={styles.secondaryButtonText}>{title}</Text>
+    </Pressable>
+  );
+}
+
 export function Pill({ text }: { text: string }) {
   return (
     <View style={styles.pill}>
@@ -79,46 +112,142 @@ export function Pill({ text }: { text: string }) {
   );
 }
 
+export function IconTile({ icon, color = COLORS.sagePale }: { icon: string; color?: string }) {
+  return (
+    <View style={[styles.iconTile, { backgroundColor: color }]}>
+      <Text style={styles.iconText}>{icon}</Text>
+    </View>
+  );
+}
+
+export function StatCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <View style={styles.statCard}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: COLORS.cream, padding: 20 },
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.cream,
+    paddingHorizontal: 22,
+    paddingTop: 28,
+  },
+  brandWrap: { alignItems: "center", marginBottom: 30 },
+  brandCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 1.5,
+    borderColor: COLORS.gold,
+    backgroundColor: COLORS.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  brandInitial: { fontFamily: "Georgia", fontSize: 38, fontStyle: "italic", color: COLORS.ink },
+  brandName: { fontSize: 13, letterSpacing: 3.2, color: COLORS.sageDeep },
+  brandSub: { fontSize: 8, letterSpacing: 2.8, color: COLORS.gold, marginTop: 2 },
+  eyebrow: {
+    fontSize: 11,
+    letterSpacing: 2.8,
+    color: COLORS.sageDeep,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  heading: {
+    fontFamily: "Georgia",
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "400",
+    color: COLORS.ink,
+    marginBottom: 7,
+  },
+  subheading: { fontSize: 15, lineHeight: 22, color: COLORS.inkMid, marginBottom: 20 },
+  label: { fontSize: 12, fontWeight: "700", letterSpacing: 0.8, color: COLORS.sageDeep, marginBottom: 7 },
   card: {
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
+    padding: 18,
     marginBottom: 14,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 2,
   },
-  heading: { fontSize: 22, fontWeight: "600", color: COLORS.ink, marginBottom: 12 },
-  label: { fontSize: 13, fontWeight: "600", color: COLORS.sageDeep, marginBottom: 4 },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
     fontSize: 15,
     color: COLORS.ink,
-    marginBottom: 14,
+    marginBottom: 15,
     backgroundColor: COLORS.white,
   },
   button: {
     backgroundColor: COLORS.sageDeep,
-    borderRadius: 8,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: 5,
+    shadowColor: COLORS.sageDeep,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  secondaryButton: {
+    backgroundColor: COLORS.goldPale,
+    borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
-    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "#E8D6BA",
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonPressed: { opacity: 0.85 },
-  buttonText: { color: COLORS.white, fontSize: 15, fontWeight: "600" },
+  buttonPressed: { opacity: 0.82, transform: [{ scale: 0.99 }] },
+  buttonText: { color: COLORS.white, fontSize: 15, fontWeight: "700", letterSpacing: 0.4 },
+  secondaryButtonText: { color: COLORS.ink, fontSize: 15, fontWeight: "700" },
   pill: {
     alignSelf: "flex-start",
     backgroundColor: COLORS.sagePale,
     borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 6,
+    paddingVertical: 5,
+    marginBottom: 7,
   },
-  pillText: { fontSize: 11, fontWeight: "600", color: COLORS.sageDeep },
+  pillText: { fontSize: 10, fontWeight: "700", letterSpacing: 0.7, color: COLORS.sageDeep, textTransform: "uppercase" },
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  iconText: { fontSize: 19, color: COLORS.sageDeep },
+  statCard: {
+    flex: 1,
+    minWidth: 95,
+    backgroundColor: COLORS.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 15,
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+  statValue: { fontFamily: "Georgia", fontSize: 26, color: COLORS.sageDeep, marginBottom: 4 },
+  statLabel: { fontSize: 10, letterSpacing: 0.8, color: COLORS.inkMid, textTransform: "uppercase" },
 });

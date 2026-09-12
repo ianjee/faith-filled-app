@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { Link, router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { Screen, Heading, Label, FieldInput, PrimaryButton, COLORS } from "@/components/ui";
+import { Screen, BrandMark, Eyebrow, Heading, Subheading, Label, FieldInput, PrimaryButton, COLORS } from "@/components/ui";
 
 export default function Login() {
   const { signIn } = useAuth();
@@ -25,41 +25,53 @@ export default function Login() {
 
   return (
     <Screen>
-      <Heading>Welcome back</Heading>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+        <BrandMark />
+        <Eyebrow>Private Wellness Portal</Eyebrow>
+        <Heading>Welcome back</Heading>
+        <Subheading>Sign in to continue your Faith-Filled Bodywork experience.</Subheading>
 
-      <Label>Email</Label>
-      <FieldInput
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        placeholder="you@example.com"
-      />
+        <View style={{ marginTop: 4 }}>
+          <Label>Email address</Label>
+          <FieldInput
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoCorrect={false}
+            placeholder="you@example.com"
+          />
 
-      <Label>Password</Label>
-      <FieldInput
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        placeholder="••••••••"
-      />
+          <Label>Password</Label>
+          <FieldInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            placeholder="Enter your password"
+          />
+        </View>
 
-      {error && <Text style={{ color: "#B3261E", marginBottom: 10 }}>{error}</Text>}
+        {error && (
+          <View style={{ backgroundColor: "#F8E9E6", borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <Text style={{ color: COLORS.danger, fontSize: 13, lineHeight: 18 }}>{error}</Text>
+          </View>
+        )}
 
-      <PrimaryButton title="Log in" onPress={handleLogin} loading={loading} />
+        <PrimaryButton title="Sign in" onPress={handleLogin} loading={loading} />
 
-      <View style={{ flexDirection: "row", justifyContent: "center", marginTop: 18, gap: 6 }}>
-        <Text style={{ color: COLORS.inkMid }}>New here?</Text>
-        <Link href="/(auth)/register" style={{ color: COLORS.sageDeep, fontWeight: "600" }}>
-          Create an account
+        <Link href="/(auth)/forgot-password" style={{ color: COLORS.sageDeep, textAlign: "center", marginTop: 18, fontWeight: "600" }}>
+          Forgot password?
         </Link>
-      </View>
-      <Link
-        href="/(auth)/forgot-password"
-        style={{ color: COLORS.inkMid, textAlign: "center", marginTop: 10 }}
-      >
-        Forgot password?
-      </Link>
+
+        <View style={{ height: 1, backgroundColor: COLORS.border, marginVertical: 25 }} />
+
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 5 }}>
+          <Text style={{ color: COLORS.inkMid }}>New here?</Text>
+          <Link href="/(auth)/register" style={{ color: COLORS.gold, fontWeight: "700" }}>
+            Create an account
+          </Link>
+        </View>
+      </ScrollView>
     </Screen>
   );
 }
