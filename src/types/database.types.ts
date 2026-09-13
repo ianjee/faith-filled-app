@@ -353,6 +353,7 @@ export interface Database {
           stress_improved: boolean | null;
           mobility_improved: boolean | null;
           communication_rating: number | null;
+          felt_listened_to: boolean | null;
           understood_home_care: boolean | null;
           would_recommend: boolean | null;
           feedback_text: string | null;
@@ -368,6 +369,7 @@ export interface Database {
           stress_improved?: boolean | null;
           mobility_improved?: boolean | null;
           communication_rating?: number | null;
+          felt_listened_to?: boolean | null;
           understood_home_care?: boolean | null;
           would_recommend?: boolean | null;
           feedback_text?: string | null;
@@ -383,6 +385,7 @@ export interface Database {
           stress_improved?: boolean | null;
           mobility_improved?: boolean | null;
           communication_rating?: number | null;
+          felt_listened_to?: boolean | null;
           understood_home_care?: boolean | null;
           would_recommend?: boolean | null;
           feedback_text?: string | null;
