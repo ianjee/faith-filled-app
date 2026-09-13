@@ -45,6 +45,7 @@ export interface Database {
           clinic_id: string | null;
           role: UserRole;
           full_name: string | null;
+          email: string | null;
           phone: string | null;
           avatar_path: string | null;
           created_at: string;
@@ -54,6 +55,7 @@ export interface Database {
           clinic_id?: string | null;
           role?: UserRole;
           full_name?: string | null;
+          email?: string | null;
           phone?: string | null;
           avatar_path?: string | null;
           created_at?: string;
@@ -63,6 +65,7 @@ export interface Database {
           clinic_id?: string | null;
           role?: UserRole;
           full_name?: string | null;
+          email?: string | null;
           phone?: string | null;
           avatar_path?: string | null;
           created_at?: string;
