@@ -67,6 +67,7 @@ export default function Survey() {
   const [stressImproved, setStressImproved] = useState<boolean | null>(null);
   const [mobilityImproved, setMobilityImproved] = useState<boolean | null>(null);
   const [communicationRating, setCommunicationRating] = useState<number | null>(null);
+  const [feltListenedTo, setFeltListenedTo] = useState<boolean | null>(null);
   const [understoodHomeCare, setUnderstoodHomeCare] = useState<boolean | null>(null);
   const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
@@ -99,6 +100,7 @@ export default function Survey() {
       stress_improved: stressImproved,
       mobility_improved: mobilityImproved,
       communication_rating: communicationRating,
+      felt_listened_to: feltListenedTo,
       understood_home_care: understoodHomeCare,
       would_recommend: wouldRecommend,
       feedback_text: feedbackText || null,
@@ -162,16 +164,20 @@ export default function Survey() {
           <YesNoToggle value={sleepImproved} onChange={setSleepImproved} />
         </Card>
         <Card>
-          <Label>Did your stress improve?</Label>
+          <Label>Did your stress level improve?</Label>
           <YesNoToggle value={stressImproved} onChange={setStressImproved} />
         </Card>
         <Card>
-          <Label>Did your mobility improve?</Label>
+          <Label>Did your range of motion improve?</Label>
           <YesNoToggle value={mobilityImproved} onChange={setMobilityImproved} />
         </Card>
         <Card>
           <Label>Rate your therapist's communication (1–5)</Label>
           <OneToFiveScale value={communicationRating} onChange={setCommunicationRating} />
+        </Card>
+        <Card>
+          <Label>Did you feel listened to?</Label>
+          <YesNoToggle value={feltListenedTo} onChange={setFeltListenedTo} />
         </Card>
         <Card>
           <Label>Did you understand your home-care instructions?</Label>

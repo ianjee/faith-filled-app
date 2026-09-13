@@ -9,6 +9,7 @@ interface ReportMetrics {
   avgPainImprovementPct: number | null;
   surveyResponseCount: number;
   wouldRecommendPct: number | null;
+  feltListenedToPct: number | null;
 }
 
 export default function AdminReports() {
@@ -17,6 +18,7 @@ export default function AdminReports() {
     avgPainImprovementPct: null,
     surveyResponseCount: 0,
     wouldRecommendPct: null,
+    feltListenedToPct: null,
   });
 
   useEffect(() => {
@@ -24,30 +26,34 @@ export default function AdminReports() {
     // Table: surveys — RLS "surveys_admin_read" scopes to clients within this clinic.
     supabase
       .from("surveys")
-      .select("pain_before, pain_after, would_recommend")
+      .select("pain_before, pain_after, would_recommend, felt_listened_to")
       .then(({ data }) => {
         const rows: Array<{
           pain_before: number | null;
           pain_after: number | null;
           would_recommend: boolean | null;
+          felt_listened_to: boolean | null;
         }> = data ?? [];
         const painRows = rows.filter(
-          (r): r is { pain_before: number; pain_after: number; would_recommend: boolean | null } =>
-            r.pain_before !== null && r.pain_after !== null && r.pain_before > 0
+          (r): r is typeof r & { pain_before: number; pain_after: number } =>
+            r.pain_before !== null && r.pain_before > 0 && r.pain_after !== null
         );
         const avgPain = painRows.length
           ? Math.round(
-              painRows.reduce((sum: number, r) => sum + ((r.pain_before - r.pain_after) / r.pain_before) * 100, 0) /
+              painRows.reduce((sum, r) => sum + ((r.pain_before - r.pain_after) / r.pain_before) * 100, 0) /
                 painRows.length
             )
           : null;
         const recCount = rows.filter((r) => r.would_recommend === true).length;
         const recPct = rows.length ? Math.round((recCount / rows.length) * 100) : null;
+        const listenedCount = rows.filter((r) => r.felt_listened_to === true).length;
+        const listenedPct = rows.length ? Math.round((listenedCount / rows.length) * 100) : null;
 
         setMetrics({
           avgPainImprovementPct: avgPain,
           surveyResponseCount: rows.length,
           wouldRecommendPct: recPct,
+          feltListenedToPct: listenedPct,
         });
       });
   }, [profile?.clinic_id]);
@@ -67,6 +73,10 @@ export default function AdminReports() {
           <StatCard
             label="Would Recommend"
             value={metrics.wouldRecommendPct !== null ? `${metrics.wouldRecommendPct}%` : "—"}
+          />
+          <StatCard
+            label="Felt Listened To"
+            value={metrics.feltListenedToPct !== null ? `${metrics.feltListenedToPct}%` : "—"}
           />
         </View>
 
