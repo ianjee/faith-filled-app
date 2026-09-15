@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View, Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -33,6 +33,20 @@ export default function AdminDashboard() {
     })();
   }, [profile]);
 
+  // signOut() clears the Supabase session, but clearing the session alone
+  // doesn't guarantee this screen navigates away — depends on a layout guard
+  // reacting to the change, which isn't always reliable right after the tap.
+  // Explicitly navigating here makes it work regardless of that.
+  async function handleSignOut() {
+    try {
+      await signOut();
+    } catch (err: any) {
+      Alert.alert("Sign out failed", err?.message ?? "Please try again.");
+      return;
+    }
+    router.replace("/(auth)/login");
+  }
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 22, paddingTop: 30, backgroundColor: COLORS.cream, flexGrow: 1 }}>
       <Eyebrow>Clinic workspace</Eyebrow>
@@ -53,12 +67,14 @@ export default function AdminDashboard() {
         <View style={{ height: 9 }} />
         <PrimaryButton title="View therapists" onPress={() => router.push("/admin/therapists")} />
         <View style={{ height: 9 }} />
+        <PrimaryButton title="Manage Staff" onPress={() => router.push("/admin/staff")} />
+        <View style={{ height: 9 }} />
         <PrimaryButton title="Reports" onPress={() => router.push("/admin/reports")} />
         <View style={{ height: 9 }} />
         <SecondaryButton title="Settings" onPress={() => router.push("/admin/settings")} />
       </Card>
 
-      <SecondaryButton title="Sign out" onPress={signOut} />
+      <SecondaryButton title="Sign out" onPress={handleSignOut} />
     </ScrollView>
   );
 }
