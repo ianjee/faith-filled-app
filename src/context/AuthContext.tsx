@@ -7,7 +7,10 @@ interface AuthContextValue {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null }>;
   signUp: (
     email: string,
     password: string,
@@ -17,9 +20,15 @@ interface AuthContextValue {
   refreshProfile: () => Promise<void>;
 }
 
-export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined
+);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,11 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select("*")
       .eq("id", userId)
       .single();
+
     if (error) {
       console.warn("Failed to load profile:", error.message);
       setProfile(null);
       return;
     }
+
     setProfile(data as Profile);
   };
 
@@ -43,18 +54,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
+
       setSession(data.session);
-      if (data.session?.user) await loadProfile(data.session.user.id);
+
+      if (data.session?.user) {
+        await loadProfile(data.session.user.id);
+      }
+
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+    const {
+      data: listener,
+    } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!mounted) return;
+
       setSession(newSession);
+
       if (newSession?.user) {
         await loadProfile(newSession.user.id);
       } else {
         setProfile(null);
       }
+
+      setLoading(false);
     });
 
     return () => {
@@ -63,37 +86,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signIn: AuthContextValue["signIn"] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+  const signIn: AuthContextValue["signIn"] = async (
+    email,
+    password
+  ) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    return {
+      error: error?.message ?? null,
+    };
   };
 
-  // Account creation only; a clinic admin assigns clinic_id + role afterward
-  // (or an invite-flow / edge function can do it automatically — see Future Features).
-  const signUp: AuthContextValue["signUp"] = async (email, password, fullName) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return { error: error.message };
+  const signUp: AuthContextValue["signUp"] = async (
+    email,
+    password,
+    fullName
+  ) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
     if (data.user) {
       const { error: profileError } = await supabase
         .from("profiles")
-        .insert({ id: data.user.id, full_name: fullName, role: "client" });
-      if (profileError) return { error: profileError.message };
+        .insert({
+          id: data.user.id,
+          full_name: fullName,
+          role: "client",
+        });
+
+      if (profileError) {
+        return { error: profileError.message };
+      }
     }
+
     return { error: null };
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setSession(null);
+    setProfile(null);
+
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.warn("Sign out error:", error.message);
+    }
   };
 
   const refreshProfile = async () => {
-    if (session?.user) await loadProfile(session.user.id);
+    if (session?.user) {
+      await loadProfile(session.user.id);
+    }
   };
 
   const value = useMemo(
-    () => ({ session, profile, loading, signIn, signUp, signOut, refreshProfile }),
+    () => ({
+      session,
+      profile,
+      loading,
+      signIn,
+      signUp,
+      signOut,
+      refreshProfile,
+    }),
     [session, profile, loading]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
