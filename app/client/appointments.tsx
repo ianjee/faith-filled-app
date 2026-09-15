@@ -3,7 +3,16 @@ import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { Screen, Eyebrow, Heading, Card, PrimaryButton, SecondaryButton, Pill, COLORS } from "@/components/ui";
+import {
+  Screen,
+  Eyebrow,
+  Heading,
+  Card,
+  PrimaryButton,
+  SecondaryButton,
+  Pill,
+  COLORS,
+} from "@/components/ui";
 
 interface Appointment {
   id: string;
@@ -23,32 +32,52 @@ export default function Appointments() {
 
   useEffect(() => {
     if (!profile) return;
-    // Table: appointments — RLS "appointments_client" scopes to client_id = auth.uid()
+
     supabase
       .from("appointments")
       .select("*")
       .eq("client_id", profile.id)
       .order("starts_at", { ascending: false })
-      .then(({ data }) => setAppointments((data as Appointment[]) ?? []));
+      .then(({ data }) =>
+        setAppointments((data as Appointment[]) ?? [])
+      );
   }, [profile?.id]);
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 34 }}
+      >
         <Eyebrow>Your sessions</Eyebrow>
         <Heading>Appointment History</Heading>
 
         {appointments.length === 0 ? (
           <Card>
-            <Text style={{ color: COLORS.inkMid }}>No appointments yet.</Text>
+            <Text style={{ color: COLORS.inkMid }}>
+              No appointments yet.
+            </Text>
           </Card>
         ) : (
           appointments.map((item) => (
             <Card key={item.id}>
-              <Text style={{ fontFamily: "Georgia", fontSize: 17, color: COLORS.ink, marginBottom: 4 }}>
+              <Text
+                style={{
+                  fontFamily: "Georgia",
+                  fontSize: 17,
+                  color: COLORS.ink,
+                  marginBottom: 4,
+                }}
+              >
                 {item.service_name}
               </Text>
-              <Text style={{ color: COLORS.inkMid, marginBottom: 6 }}>
+
+              <Text
+                style={{
+                  color: COLORS.inkMid,
+                  marginBottom: 6,
+                }}
+              >
                 {new Date(item.starts_at).toLocaleString([], {
                   weekday: "long",
                   month: "long",
@@ -57,12 +86,21 @@ export default function Appointments() {
                   minute: "2-digit",
                 })}
               </Text>
+
               <Pill text={item.status} />
+
               {item.status === "completed" ? (
                 <View style={{ marginTop: 10 }}>
                   <PrimaryButton
                     title="Leave Feedback"
-                    onPress={() => router.push({ pathname: "/client/survey", params: { appointmentId: item.id } })}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/client/survey",
+                        params: {
+                          appointmentId: item.id,
+                        },
+                      })
+                    }
                   />
                 </View>
               ) : null}
@@ -71,7 +109,11 @@ export default function Appointments() {
         )}
 
         <View style={{ height: 4 }} />
-        <SecondaryButton title="Back" onPress={() => router.back()} />
+
+        <SecondaryButton
+          title="Back to Dashboard"
+          onPress={() => router.replace("/client/dashboard")}
+        />
       </ScrollView>
     </Screen>
   );
