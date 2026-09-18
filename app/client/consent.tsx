@@ -71,7 +71,7 @@ export default function Consent() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}>
         <Eyebrow>Required before treatment</Eyebrow>
         <Heading>Consent & Policies</Heading>
 

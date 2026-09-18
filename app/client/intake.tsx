@@ -52,7 +52,7 @@ export default function IntakeForm() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}>
         <Eyebrow>Before your session</Eyebrow>
         <Heading>Intake Form</Heading>
 

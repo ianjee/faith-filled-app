@@ -85,7 +85,7 @@ export default function ClientDashboard() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30, paddingTop: 30 }}>
         <Eyebrow>Your wellness space</Eyebrow>
         <Heading>Welcome, {firstName}</Heading>
         <Subheading>A place to rest, restore, and reconnect.</Subheading>

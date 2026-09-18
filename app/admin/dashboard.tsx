@@ -93,16 +93,13 @@ export default function AdminDashboard() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
         padding: 22,
-        paddingTop: 30,
+        paddingTop: 50,
         backgroundColor: COLORS.cream,
         flexGrow: 1,
       }}
     >
       <Eyebrow>Clinic workspace</Eyebrow>
       <Heading>Clinic overview</Heading>
-      <Text style={{ color: COLORS.inkMid, fontSize: 15, marginBottom: 22 }}>
-        A quick look at your practice.
-      </Text>
 
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 22 }}>
         <StatCard label="Clients" value={metrics?.clientCount ?? "—"} />
@@ -113,10 +110,7 @@ export default function AdminDashboard() {
       <Eyebrow>Manage</Eyebrow>
       <Card>
         <Text style={{ fontFamily: "Georgia", fontSize: 19, color: COLORS.ink, marginBottom: 6 }}>
-          Practice management
-        </Text>
-        <Text style={{ color: COLORS.inkMid, lineHeight: 19, marginBottom: 15 }}>
-          Access clients, therapists, reports, and clinic settings.
+          Clinic Management
         </Text>
         <PrimaryButton title="View clients" onPress={() => router.push("/admin/clients")} />
         <View style={{ height: 9 }} />

@@ -274,7 +274,7 @@ export default function ManageStaff() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}>
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>Manage Staff</Heading>
 

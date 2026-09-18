@@ -251,7 +251,7 @@ export default function AdminClientDetails() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}>
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>{profile?.full_name ?? "Client Details"}</Heading>
 

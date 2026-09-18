@@ -375,7 +375,7 @@ export default function AdminClients() {
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: 34 },
+  content: { paddingBottom: 34, paddingTop: 30 },
   clientHeader: {
     flexDirection: "row",
     alignItems: "center",

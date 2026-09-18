@@ -158,7 +158,7 @@ export default function Survey() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}>
         <Eyebrow>How did that session feel?</Eyebrow>
         <Heading>Post-Session Survey</Heading>
 

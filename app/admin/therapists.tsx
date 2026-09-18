@@ -76,7 +76,7 @@ export default function AdminTherapists() {
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={{  paddingBottom: 34, paddingTop: 30 }}
       >
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>Therapists</Heading>
