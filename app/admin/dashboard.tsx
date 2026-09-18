@@ -3,7 +3,15 @@ import { ScrollView, Text, View, Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { Heading, Eyebrow, Card, PrimaryButton, SecondaryButton, StatCard, COLORS } from "@/components/ui";
+import {
+  Heading,
+  Eyebrow,
+  Card,
+  PrimaryButton,
+  SecondaryButton,
+  StatCard,
+  COLORS,
+} from "@/components/ui";
 
 interface ClinicMetrics {
   clientCount: number;
@@ -16,27 +24,59 @@ export default function AdminDashboard() {
   const [metrics, setMetrics] = useState<ClinicMetrics | null>(null);
 
   useEffect(() => {
-    if (!profile?.clinic_id) return;
+    if (!profile?.clinic_id) {
+      setMetrics(null);
+      return;
+    }
+
     const clinicId = profile.clinic_id;
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    (async () => {
-      const [{ count: clientCount }, { count: therapistCount }, { count: sessionsThisMonth }] =
-        await Promise.all([
-          supabase.from("clients").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId),
-          supabase.from("therapists").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId),
-          supabase.from("appointments").select("id", { count: "exact", head: true }).eq("clinic_id", clinicId).gte("starts_at", startOfMonth.toISOString()),
-        ]);
-      setMetrics({ clientCount: clientCount ?? 0, therapistCount: therapistCount ?? 0, sessionsThisMonth: sessionsThisMonth ?? 0 });
-    })();
-  }, [profile]);
+    async function loadMetrics() {
+      const [clientResult, therapistResult, sessionsResult] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("clinic_id", clinicId)
+          .eq("role", "client"),
 
-  // signOut() clears the Supabase session, but clearing the session alone
-  // doesn't guarantee this screen navigates away — depends on a layout guard
-  // reacting to the change, which isn't always reliable right after the tap.
-  // Explicitly navigating here makes it work regardless of that.
+        supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("clinic_id", clinicId)
+          .eq("role", "therapist"),
+
+        supabase
+          .from("appointments")
+          .select("id", { count: "exact", head: true })
+          .eq("clinic_id", clinicId)
+          .gte("starts_at", startOfMonth.toISOString()),
+      ]);
+
+      if (clientResult.error) {
+        console.warn("Failed to count clients:", clientResult.error.message);
+      }
+
+      if (therapistResult.error) {
+        console.warn("Failed to count therapists:", therapistResult.error.message);
+      }
+
+      if (sessionsResult.error) {
+        console.warn("Failed to count sessions:", sessionsResult.error.message);
+      }
+
+      setMetrics({
+        clientCount: clientResult.count ?? 0,
+        therapistCount: therapistResult.count ?? 0,
+        sessionsThisMonth: sessionsResult.count ?? 0,
+      });
+    }
+
+    loadMetrics();
+  }, [profile?.clinic_id]);
+
   async function handleSignOut() {
     try {
       await signOut();
@@ -44,14 +84,25 @@ export default function AdminDashboard() {
       Alert.alert("Sign out failed", err?.message ?? "Please try again.");
       return;
     }
+
     router.replace("/(auth)/login");
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 22, paddingTop: 30, backgroundColor: COLORS.cream, flexGrow: 1 }}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{
+        padding: 22,
+        paddingTop: 30,
+        backgroundColor: COLORS.cream,
+        flexGrow: 1,
+      }}
+    >
       <Eyebrow>Clinic workspace</Eyebrow>
       <Heading>Clinic overview</Heading>
-      <Text style={{ color: COLORS.inkMid, fontSize: 15, marginBottom: 22 }}>A quick look at your practice.</Text>
+      <Text style={{ color: COLORS.inkMid, fontSize: 15, marginBottom: 22 }}>
+        A quick look at your practice.
+      </Text>
 
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 22 }}>
         <StatCard label="Clients" value={metrics?.clientCount ?? "—"} />
@@ -61,8 +112,12 @@ export default function AdminDashboard() {
 
       <Eyebrow>Manage</Eyebrow>
       <Card>
-        <Text style={{ fontFamily: "Georgia", fontSize: 19, color: COLORS.ink, marginBottom: 6 }}>Practice management</Text>
-        <Text style={{ color: COLORS.inkMid, lineHeight: 19, marginBottom: 15 }}>Access clients, therapists, reports, and clinic settings.</Text>
+        <Text style={{ fontFamily: "Georgia", fontSize: 19, color: COLORS.ink, marginBottom: 6 }}>
+          Practice management
+        </Text>
+        <Text style={{ color: COLORS.inkMid, lineHeight: 19, marginBottom: 15 }}>
+          Access clients, therapists, reports, and clinic settings.
+        </Text>
         <PrimaryButton title="View clients" onPress={() => router.push("/admin/clients")} />
         <View style={{ height: 9 }} />
         <PrimaryButton title="View therapists" onPress={() => router.push("/admin/therapists")} />
