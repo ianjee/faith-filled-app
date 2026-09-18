@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { ScrollView, Text, View } from "react-native";
+import { useLocalSearchParams, router } from "expo-router";
 import { getClientProfile } from "@/services/clients";
-import { Heading, Card, Label, Pill, COLORS } from "@/components/ui";
+import {
+  Heading,
+  Card,
+  Label,
+  Pill,
+  SecondaryButton,
+  COLORS,
+} from "@/components/ui";
 
 export default function ClientProfile() {
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
@@ -15,7 +22,14 @@ export default function ClientProfile() {
 
   if (!profileData) {
     return (
-      <ScrollView contentContainerStyle={{ padding: 20, backgroundColor: COLORS.cream, flexGrow: 1 }}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: 20,
+          paddingTop: 30,
+          backgroundColor: COLORS.cream,
+          flexGrow: 1,
+        }}
+      >
         <Text style={{ color: COLORS.inkMid }}>Loading client…</Text>
       </ScrollView>
     );
@@ -26,7 +40,11 @@ export default function ClientProfile() {
   const consents: any[] = profileData.consents ?? [];
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, backgroundColor: COLORS.cream, flexGrow: 1 }}>
+    <ScrollView
+      style={{ backgroundColor: COLORS.cream }}
+      contentContainerStyle={{ padding: 20, paddingTop: 50, paddingBottom: 34, flexGrow: 1 }}
+      showsVerticalScrollIndicator={false}
+    >
       <Heading>{profileData.profiles?.full_name ?? "Client"}</Heading>
 
       <Card>
@@ -67,11 +85,18 @@ export default function ClientProfile() {
       <Card>
         <Label>Consent status</Label>
         {consents.length > 0 ? (
-          consents.map((c) => <Pill key={c.id} text={`${c.document_name} · signed`} />)
+          consents.map((c) => (
+            <Pill key={c.id} text={`${c.document_name} · signed`} />
+          ))
         ) : (
-          <Text style={{ color: "#B3261E" }}>No consent on file — do not begin treatment.</Text>
+          <Text style={{ color: "#B3261E" }}>
+            No consent on file — do not begin treatment.
+          </Text>
         )}
       </Card>
+
+      <View style={{ height: 4 }} />
+      <SecondaryButton title="Back" onPress={() => router.back()} />
     </ScrollView>
   );
 }
