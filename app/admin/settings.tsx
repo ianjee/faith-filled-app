@@ -15,7 +15,7 @@ export default function AdminSettings() {
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 34, paddingTop: 30, }}
+        contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}
       >
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>Settings</Heading>

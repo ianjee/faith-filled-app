@@ -24,7 +24,7 @@ export default function TherapistDashboard() {
   return (
     <FlatList
       style={{ backgroundColor: COLORS.cream }}
-      contentContainerStyle={{ padding: 22, paddingTop: 30, flexGrow: 1 }}
+      contentContainerStyle={{ padding: 22, paddingTop: 50, flexGrow: 1 }}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
         <View>
