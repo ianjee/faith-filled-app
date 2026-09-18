@@ -4,20 +4,11 @@ import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import {
-  Screen,
-  Eyebrow,
-  Heading,
-  Label,
-  FieldInput,
-  PrimaryButton,
-  SecondaryButton,
-  Card,
-  Pill,
-  COLORS,
+  Screen, Eyebrow, Heading, Label, FieldInput, PrimaryButton,
+  SecondaryButton, Card, Pill, COLORS,
 } from "@/components/ui";
 
 type StaffRole = "client" | "therapist" | "admin" | "owner";
-
 const ASSIGNABLE_ROLES: StaffRole[] = ["client", "therapist", "admin"];
 
 interface StaffProfile {
@@ -78,12 +69,29 @@ function EditRoleButton({ onPress, disabled }: { onPress: () => void; disabled?:
   );
 }
 
+function SkeletonCard() {
+  return (
+    <Card>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flex: 1, gap: 7 }}>
+          <View style={{ width: "55%", height: 15, borderRadius: 5, backgroundColor: COLORS.border }} />
+          <View style={{ width: "75%", height: 10, borderRadius: 5, backgroundColor: COLORS.border }} />
+          <View style={{ width: 55, height: 20, borderRadius: 10, backgroundColor: COLORS.border }} />
+        </View>
+        <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.border }} />
+      </View>
+    </Card>
+  );
+}
+
 export default function ManageStaff() {
   const { profile } = useAuth();
   const clinicId: string | null = profile?.clinic_id ?? null;
 
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loadingStaff, setLoadingStaff] = useState(true);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [showAddTherapist, setShowAddTherapist] = useState(false);
   const [showExistingAccounts, setShowExistingAccounts] = useState(false);
   const [accountSearch, setAccountSearch] = useState("");
@@ -100,11 +108,15 @@ export default function ManageStaff() {
   const loadAllAccounts = useCallback(async () => {
     if (!clinicId) return;
 
+    setLoadingAccounts(true);
+
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, email, role")
       .eq("clinic_id", clinicId)
       .order("full_name", { ascending: true });
+
+    setLoadingAccounts(false);
 
     if (error) {
       Alert.alert("Unable to load accounts", error.message);
@@ -117,8 +129,11 @@ export default function ManageStaff() {
   const loadStaff = useCallback(async () => {
     if (!clinicId) {
       setStaff([]);
+      setLoadingStaff(false);
       return;
     }
+
+    setLoadingStaff(true);
 
     const { data, error } = await supabase
       .from("profiles")
@@ -126,6 +141,8 @@ export default function ManageStaff() {
       .eq("clinic_id", clinicId)
       .in("role", ["owner", "admin", "therapist"])
       .order("role", { ascending: true });
+
+    setLoadingStaff(false);
 
     if (error) {
       Alert.alert("Unable to load staff", error.message);
@@ -149,8 +166,7 @@ export default function ManageStaff() {
       return;
     }
 
-    const target =
-      staff.find((item) => item.id === targetId) ??
+    const target = staff.find((item) => item.id === targetId) ??
       allAccounts.find((item) => item.id === targetId);
 
     const displayName = target?.full_name ?? target?.email ?? "this person";
@@ -177,10 +193,7 @@ export default function ManageStaff() {
           if (role === "therapist") {
             const { error: therapistError } = await supabase
               .from("therapists")
-              .upsert(
-                { id: targetId, clinic_id: clinicId },
-                { onConflict: "id" }
-              );
+              .upsert({ id: targetId, clinic_id: clinicId }, { onConflict: "id" });
 
             if (therapistError) {
               setBusyId(null);
@@ -198,10 +211,7 @@ export default function ManageStaff() {
 
             if (therapistDeleteError) {
               setBusyId(null);
-              Alert.alert(
-                "Therapist record could not be removed",
-                therapistDeleteError.message
-              );
+              Alert.alert("Therapist record could not be removed", therapistDeleteError.message);
               return;
             }
           }
@@ -210,7 +220,6 @@ export default function ManageStaff() {
           setEditingRoleId(null);
           await loadStaff();
           await loadAllAccounts();
-
           Alert.alert("Done", `${displayName} is now set to "${role}".`);
         },
       },
@@ -222,13 +231,11 @@ export default function ManageStaff() {
       <Screen>
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>Manage Staff</Heading>
-
         <Card>
           <Text style={{ color: COLORS.inkMid }}>
             Your account is not currently assigned to a clinic.
           </Text>
         </Card>
-
         <SecondaryButton title="Back" onPress={() => router.back()} />
       </Screen>
     );
@@ -245,11 +252,9 @@ export default function ManageStaff() {
             <Text style={{ fontFamily: "Georgia", fontSize: 16, color: COLORS.ink, marginBottom: 3 }}>
               {account.full_name ?? "Unnamed"}
             </Text>
-
             <Text style={{ color: COLORS.inkMid, fontSize: 12, marginBottom: 7 }}>
               {account.email ?? "No email"}
             </Text>
-
             <Pill text={account.role} />
           </View>
 
@@ -264,7 +269,6 @@ export default function ManageStaff() {
             <Text style={{ color: COLORS.inkMid, fontSize: 12, marginBottom: 7 }}>
               Change role
             </Text>
-
             <RoleActionRow target={account} onSetRole={handleSetRole} busy={isBusy} />
           </View>
         ) : null}
@@ -274,7 +278,10 @@ export default function ManageStaff() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 34, paddingTop: 30 }}
+      >
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>Manage Staff</Heading>
 
@@ -342,23 +349,13 @@ export default function ManageStaff() {
               title="Create Therapist"
               loading={creatingTherapist}
               onPress={async () => {
-                if (
-                  !newTherapist.full_name.trim() ||
-                  !newTherapist.email.trim() ||
-                  !newTherapist.password
-                ) {
+                if (!newTherapist.full_name.trim() || !newTherapist.email.trim() || !newTherapist.password) {
                   Alert.alert("Missing information", "Please complete all fields.");
                   return;
                 }
 
-                if (
-                  newTherapist.password.length < 6 ||
-                  newTherapist.password !== newTherapist.confirmPassword
-                ) {
-                  Alert.alert(
-                    "Invalid password",
-                    "Use at least 6 characters and make sure both passwords match."
-                  );
+                if (newTherapist.password.length < 6 || newTherapist.password !== newTherapist.confirmPassword) {
+                  Alert.alert("Invalid password", "Use at least 6 characters and make sure both passwords match.");
                   return;
                 }
 
@@ -380,21 +377,12 @@ export default function ManageStaff() {
                   return;
                 }
 
-                setNewTherapist({
-                  full_name: "",
-                  email: "",
-                  password: "",
-                  confirmPassword: "",
-                });
-
+                setNewTherapist({ full_name: "", email: "", password: "", confirmPassword: "" });
                 setShowAddTherapist(false);
                 await loadStaff();
                 await loadAllAccounts();
 
-                Alert.alert(
-                  "Therapist created",
-                  "The therapist account was created successfully."
-                );
+                Alert.alert("Therapist created", "The therapist account was created successfully.");
               }}
             />
           </Card>
@@ -419,17 +407,26 @@ export default function ManageStaff() {
               }}
             />
 
-            {allAccounts
-              .filter((account) => {
-                const q = accountSearch.trim().toLowerCase();
+            {loadingAccounts ? (
+              <View>
+                {[1, 2, 3].map((item) => <SkeletonCard key={item} />)}
+              </View>
+            ) : (
+              allAccounts
+                .filter((account) => {
+                  const q = accountSearch.trim().toLowerCase();
+                  return !q ||
+                    account.full_name?.toLowerCase().includes(q) ||
+                    account.email?.toLowerCase().includes(q);
+                })
+                .map(renderAccountCard)
+            )}
 
-                return (
-                  !q ||
-                  account.full_name?.toLowerCase().includes(q) ||
-                  account.email?.toLowerCase().includes(q)
-                );
-              })
-              .map(renderAccountCard)}
+            {!loadingAccounts && allAccounts.length === 0 ? (
+              <Text style={{ color: COLORS.inkMid, fontSize: 12 }}>
+                No existing accounts found.
+              </Text>
+            ) : null}
           </Card>
         ) : null}
 
@@ -437,7 +434,11 @@ export default function ManageStaff() {
           <Eyebrow>Current staff</Eyebrow>
         </View>
 
-        {staff.length === 0 ? (
+        {loadingStaff ? (
+          <View>
+            {[1, 2, 3].map((item) => <SkeletonCard key={item} />)}
+          </View>
+        ) : staff.length === 0 ? (
           <Card>
             <Text style={{ color: COLORS.inkMid }}>
               No admins, owners, or therapists on file yet.
@@ -448,7 +449,6 @@ export default function ManageStaff() {
         )}
 
         <View style={{ height: 4 }} />
-
         <SecondaryButton title="Back" onPress={() => router.back()} />
       </ScrollView>
     </Screen>

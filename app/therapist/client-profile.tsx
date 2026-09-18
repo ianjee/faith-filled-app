@@ -14,23 +14,49 @@ import {
 export default function ClientProfile() {
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
   const [profileData, setProfileData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!clientId) return;
-    getClientProfile(clientId).then(({ data }) => setProfileData(data));
+    setLoading(true);
+    getClientProfile(clientId).then(({ data }) => {
+      setProfileData(data);
+      setLoading(false);
+    });
   }, [clientId]);
+
+  if (loading) {
+    return (
+      <ScrollView
+        style={{ backgroundColor: COLORS.cream }}
+        contentContainerStyle={{ padding: 20, paddingTop: 50, paddingBottom: 34 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ width: "60%", height: 24, borderRadius: 5, backgroundColor: COLORS.border, marginBottom: 22 }} />
+
+        {[1, 2, 3].map((item) => (
+          <Card key={item}>
+            <View style={{ width: 70, height: 9, borderRadius: 4, backgroundColor: COLORS.border, marginBottom: 14 }} />
+            <View style={{ width: "90%", height: 12, borderRadius: 5, backgroundColor: COLORS.border, marginBottom: 9 }} />
+            <View style={{ width: "70%", height: 12, borderRadius: 5, backgroundColor: COLORS.border }} />
+            {item === 2 ? (
+              <View style={{ width: "50%", height: 12, borderRadius: 5, backgroundColor: COLORS.border, marginTop: 9 }} />
+            ) : null}
+          </Card>
+        ))}
+      </ScrollView>
+    );
+  }
 
   if (!profileData) {
     return (
       <ScrollView
-        contentContainerStyle={{
-          padding: 20,
-          paddingTop: 30,
-          backgroundColor: COLORS.cream,
-          flexGrow: 1,
-        }}
+        style={{ backgroundColor: COLORS.cream }}
+        contentContainerStyle={{ padding: 20, paddingTop: 50, paddingBottom: 34, flexGrow: 1 }}
       >
-        <Text style={{ color: COLORS.inkMid }}>Loading client…</Text>
+        <Text style={{ color: COLORS.inkMid }}>Unable to load client profile.</Text>
+        <View style={{ height: 12 }} />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
       </ScrollView>
     );
   }
