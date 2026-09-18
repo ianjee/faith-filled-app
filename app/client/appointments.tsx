@@ -38,46 +38,27 @@ export default function Appointments() {
       .select("*")
       .eq("client_id", profile.id)
       .order("starts_at", { ascending: false })
-      .then(({ data }) =>
-        setAppointments((data as Appointment[]) ?? [])
-      );
+      .then(({ data }) => setAppointments((data as Appointment[]) ?? []));
   }, [profile?.id]);
 
   return (
     <Screen>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 34 }}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
         <Eyebrow>Your sessions</Eyebrow>
         <Heading>Appointment History</Heading>
 
         {appointments.length === 0 ? (
           <Card>
-            <Text style={{ color: COLORS.inkMid }}>
-              No appointments yet.
-            </Text>
+            <Text style={{ color: COLORS.inkMid }}>No appointments yet.</Text>
           </Card>
         ) : (
           appointments.map((item) => (
             <Card key={item.id}>
-              <Text
-                style={{
-                  fontFamily: "Georgia",
-                  fontSize: 17,
-                  color: COLORS.ink,
-                  marginBottom: 4,
-                }}
-              >
+              <Text style={{ fontFamily: "Georgia", fontSize: 17, color: COLORS.ink, marginBottom: 4 }}>
                 {item.service_name}
               </Text>
 
-              <Text
-                style={{
-                  color: COLORS.inkMid,
-                  marginBottom: 6,
-                }}
-              >
+              <Text style={{ color: COLORS.inkMid, marginBottom: 6 }}>
                 {new Date(item.starts_at).toLocaleString([], {
                   weekday: "long",
                   month: "long",
@@ -96,9 +77,7 @@ export default function Appointments() {
                     onPress={() =>
                       router.push({
                         pathname: "/client/survey",
-                        params: {
-                          appointmentId: item.id,
-                        },
+                        params: { appointmentId: item.id },
                       })
                     }
                   />
@@ -110,10 +89,7 @@ export default function Appointments() {
 
         <View style={{ height: 4 }} />
 
-        <SecondaryButton
-          title="Back to Dashboard"
-          onPress={() => router.replace("/client/dashboard")}
-        />
+        <SecondaryButton title="Back to Dashboard" onPress={() => router.replace("/client/dashboard")} />
       </ScrollView>
     </Screen>
   );

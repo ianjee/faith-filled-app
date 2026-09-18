@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  ScrollView,
-  Text,
-  Pressable,
-  StyleSheet,
-  View,
-  Alert,
-} from "react-native";
+import { ScrollView, Text, Pressable, StyleSheet, View, Alert } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -32,7 +25,6 @@ interface TherapistRow {
 
 export default function AdminClients() {
   const { profile } = useAuth();
-
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [therapists, setTherapists] = useState<TherapistRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,295 +45,123 @@ export default function AdminClients() {
   async function loadData(clinicId: string) {
     setLoading(true);
 
-    /*
-     * Load client and therapist records for this clinic.
-     */
     const [
       { data: clientRows, error: clientError },
       { data: therapistRows, error: therapistError },
     ] = await Promise.all([
-      supabase
-        .from("clients")
-        .select("id")
-        .eq("clinic_id", clinicId),
-
-      supabase
-        .from("therapists")
-        .select("id")
-        .eq("clinic_id", clinicId),
+      supabase.from("clients").select("id").eq("clinic_id", clinicId),
+      supabase.from("therapists").select("id").eq("clinic_id", clinicId),
     ]);
 
-    /*
-     * Client table error
-     */
     if (clientError) {
-      console.warn(
-        "Failed to load clients:",
-        clientError.message
-      );
-
+      console.warn("Failed to load clients:", clientError.message);
       setClients([]);
       setLoading(false);
       return;
     }
 
-    /*
-     * Therapist table error
-     */
     if (therapistError) {
-      console.warn(
-        "Failed to load therapists:",
-        therapistError.message
-      );
-
+      console.warn("Failed to load therapists:", therapistError.message);
       setTherapists([]);
     }
 
-    const clientIds = (clientRows ?? []).map(
-      (row) => row.id
-    );
+    const clientIds = (clientRows ?? []).map((row) => row.id);
+    const therapistIds = (therapistRows ?? []).map((row) => row.id);
 
-    const therapistIds = (therapistRows ?? []).map(
-      (row) => row.id
-    );
+    const [clientProfilesResult, therapistProfilesResult, assignmentsResult] =
+      await Promise.all([
+        clientIds.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, role, clinic_id")
+              .in("id", clientIds)
+              .eq("role", "client")
+              .eq("clinic_id", clinicId)
+          : Promise.resolve({ data: [], error: null }),
 
-    /*
-     * Load:
-     * 1. Client profiles
-     * 2. Therapist profiles
-     * 3. Therapist assignments
-     */
-    const [
-      clientProfilesResult,
-      therapistProfilesResult,
-      assignmentsResult,
-    ] = await Promise.all([
-      /*
-       * IMPORTANT:
-       * Only profiles with role = "client"
-       * and the correct clinic are loaded.
-       */
-      clientIds.length
-        ? supabase
-            .from("profiles")
-            .select("id, full_name, role, clinic_id")
-            .in("id", clientIds)
-            .eq("role", "client")
-            .eq("clinic_id", clinicId)
-        : Promise.resolve({
-            data: [],
-            error: null,
-          }),
+        therapistIds.length
+          ? supabase
+              .from("profiles")
+              .select("id, full_name, role, clinic_id")
+              .in("id", therapistIds)
+              .eq("role", "therapist")
+              .eq("clinic_id", clinicId)
+          : Promise.resolve({ data: [], error: null }),
 
-      /*
-       * Only therapist profiles are loaded
-       * for the therapist assignment list.
-       */
-      therapistIds.length
-        ? supabase
-            .from("profiles")
-            .select("id, full_name, role, clinic_id")
-            .in("id", therapistIds)
-            .eq("role", "therapist")
-            .eq("clinic_id", clinicId)
-        : Promise.resolve({
-            data: [],
-            error: null,
-          }),
+        clientIds.length
+          ? supabase
+              .from("client_therapist_assignments")
+              .select("client_id, therapist_id")
+              .in("client_id", clientIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      /*
-       * Load therapist assignments for clients.
-       */
-      clientIds.length
-        ? supabase
-            .from("client_therapist_assignments")
-            .select("client_id, therapist_id")
-            .in("client_id", clientIds)
-        : Promise.resolve({
-            data: [],
-            error: null,
-          }),
-    ]);
-
-    /*
-     * Profile loading errors
-     */
     if (clientProfilesResult.error) {
-      console.warn(
-        "Failed to load client profiles:",
-        clientProfilesResult.error.message
-      );
+      console.warn("Failed to load client profiles:", clientProfilesResult.error.message);
     }
 
     if (therapistProfilesResult.error) {
-      console.warn(
-        "Failed to load therapist profiles:",
-        therapistProfilesResult.error.message
-      );
+      console.warn("Failed to load therapist profiles:", therapistProfilesResult.error.message);
     }
 
     if (assignmentsResult.error) {
-      console.warn(
-        "Failed to load therapist assignments:",
-        assignmentsResult.error.message
-      );
+      console.warn("Failed to load therapist assignments:", assignmentsResult.error.message);
     }
 
-    /*
-     * These are now guaranteed to be profiles
-     * with role = "client".
-     */
-    const validClientProfiles =
-      clientProfilesResult.data ?? [];
+    const validClientProfiles = clientProfilesResult.data ?? [];
+    const validClientIds = new Set(validClientProfiles.map((profile) => profile.id));
 
-    /*
-     * Create a Set of valid client IDs.
-     *
-     * This prevents assignments belonging to
-     * invalid/non-client accounts from being
-     * displayed.
-     */
-    const validClientIds = new Set(
-      validClientProfiles.map(
-        (profile) => profile.id
-      )
-    );
-
-    /*
-     * Map client ID -> client name
-     */
     const clientNameById = new Map(
-      validClientProfiles.map((profile) => [
-        profile.id,
-        profile.full_name,
-      ])
+      validClientProfiles.map((profile) => [profile.id, profile.full_name])
     );
 
-    /*
-     * Create therapist list.
-     *
-     * Because the query already filters role =
-     * therapist, only therapist accounts appear here.
-     */
-    const therapistList: TherapistRow[] = (
-      therapistProfilesResult.data ?? []
-    ).map((profile) => ({
-      id: profile.id,
-      full_name: profile.full_name,
-    }));
+    const therapistList: TherapistRow[] = (therapistProfilesResult.data ?? []).map(
+      (profile) => ({
+        id: profile.id,
+        full_name: profile.full_name,
+      })
+    );
 
-    /*
-     * Create:
-     *
-     * client ID -> therapist IDs
-     *
-     * Example:
-     *
-     * client-123 -> [therapist-1, therapist-2]
-     */
-    const assignedByClient = new Map<
-      string,
-      string[]
-    >();
+    const assignedByClient = new Map<string, string[]>();
 
-    for (const assignment of
-      assignmentsResult.data ?? []) {
-      /*
-       * Ignore assignments for accounts that
-       * aren't valid clients.
-       */
-      if (
-        !validClientIds.has(
-          assignment.client_id
-        )
-      ) {
-        continue;
-      }
+    for (const assignment of assignmentsResult.data ?? []) {
+      if (!validClientIds.has(assignment.client_id)) continue;
 
-      const existing =
-        assignedByClient.get(
-          assignment.client_id
-        ) ?? [];
-
-      existing.push(
-        assignment.therapist_id
-      );
-
-      assignedByClient.set(
-        assignment.client_id,
-        existing
-      );
+      const existing = assignedByClient.get(assignment.client_id) ?? [];
+      existing.push(assignment.therapist_id);
+      assignedByClient.set(assignment.client_id, existing);
     }
 
-    /*
-     * Update therapist state.
-     */
     setTherapists(therapistList);
 
-    /*
-     * IMPORTANT:
-     * Build the Client View from the filtered
-     * client profiles instead of every record
-     * in the clients table.
-     */
     setClients(
       validClientProfiles.map((profile) => ({
         id: profile.id,
-        full_name: profile.full_name,
-        therapist_ids:
-          assignedByClient.get(
-            profile.id
-          ) ?? [],
+        full_name: clientNameById.get(profile.id) ?? null,
+        therapist_ids: assignedByClient.get(profile.id) ?? [],
       }))
     );
 
     setLoading(false);
   }
 
-  async function toggleAssignment(
-    clientId: string,
-    therapistId: string
-  ) {
-    if (
-      !profile?.clinic_id ||
-      savingId
-    ) {
-      return;
-    }
+  async function toggleAssignment(clientId: string, therapistId: string) {
+    if (!profile?.clinic_id || savingId) return;
 
-    const client = clients.find(
-      (item) => item.id === clientId
-    );
+    const client = clients.find((item) => item.id === clientId);
+    if (!client) return;
 
-    if (!client) {
-      return;
-    }
-
-    const alreadyAssigned =
-      client.therapist_ids.includes(
-        therapistId
-      );
-
+    const alreadyAssigned = client.therapist_ids.includes(therapistId);
     setSavingId(clientId);
 
     const result = alreadyAssigned
       ? await supabase
-          .from(
-            "client_therapist_assignments"
-          )
+          .from("client_therapist_assignments")
           .delete()
-          .eq(
-            "client_id",
-            clientId
-          )
-          .eq(
-            "therapist_id",
-            therapistId
-          )
+          .eq("client_id", clientId)
+          .eq("therapist_id", therapistId)
       : await supabase
-          .from(
-            "client_therapist_assignments"
-          )
+          .from("client_therapist_assignments")
           .insert({
             client_id: clientId,
             therapist_id: therapistId,
@@ -349,39 +169,19 @@ export default function AdminClients() {
 
     if (result.error) {
       setSavingId(null);
-
-      Alert.alert(
-        "Assignment failed",
-        result.error.message
-      );
-
+      Alert.alert("Assignment failed", result.error.message);
       return;
     }
 
-    /*
-     * Update the UI immediately after
-     * successful assignment/removal.
-     */
     setClients((current) =>
       current.map((item) => {
-        if (
-          item.id !== clientId
-        ) {
-          return item;
-        }
+        if (item.id !== clientId) return item;
 
         return {
           ...item,
-          therapist_ids:
-            alreadyAssigned
-              ? item.therapist_ids.filter(
-                  (id) =>
-                    id !== therapistId
-                )
-              : [
-                  ...item.therapist_ids,
-                  therapistId,
-                ],
+          therapist_ids: alreadyAssigned
+            ? item.therapist_ids.filter((id) => id !== therapistId)
+            : [...item.therapist_ids, therapistId],
         };
       })
     );
@@ -389,230 +189,99 @@ export default function AdminClients() {
     setSavingId(null);
   }
 
-  function therapistName(
-    therapistId: string
-  ) {
+  function therapistName(therapistId: string) {
     return (
-      therapists.find(
-        (therapist) =>
-          therapist.id ===
-          therapistId
-      )?.full_name ??
+      therapists.find((therapist) => therapist.id === therapistId)?.full_name ??
       "Therapist"
     );
   }
 
   return (
     <Screen>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          styles.content
-        }
-      >
-        <Eyebrow>
-          Clinic workspace
-        </Eyebrow>
-
-        <Heading>
-          Clients
-        </Heading>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <Eyebrow>Clinic workspace</Eyebrow>
+        <Heading>Clients</Heading>
 
         {loading ? (
           <Card>
-            <Text style={styles.muted}>
-              Loading clients...
-            </Text>
+            <Text style={styles.muted}>Loading clients...</Text>
           </Card>
         ) : clients.length === 0 ? (
           <Card>
-            <Text style={styles.muted}>
-              No clients on file yet.
-            </Text>
+            <Text style={styles.muted}>No clients on file yet.</Text>
           </Card>
         ) : (
           clients.map((client) => {
-            const isOpen =
-              openClientId ===
-              client.id;
+            const isOpen = openClientId === client.id;
 
             return (
-              <Card
-                key={client.id}
-              >
-                {/*
-                 * Open client records
-                 */}
+              <Card key={client.id}>
                 <Pressable
                   onPress={() =>
                     router.push({
-                      pathname:
-                        "/admin/client-details",
-                      params: {
-                        clientId:
-                          client.id,
-                      },
+                      pathname: "/admin/client-details",
+                      params: { clientId: client.id },
                     })
                   }
                 >
-                  <Text
-                    style={
-                      styles.clientName
-                    }
-                  >
-                    {client.full_name ??
-                      "Client"}
+                  <Text style={styles.clientName}>
+                    {client.full_name ?? "Client"}
                   </Text>
-
-                  <Text
-                    style={
-                      styles.viewText
-                    }
-                  >
-                    View client records →
-                  </Text>
+                  <Text style={styles.viewText}>View client records →</Text>
                 </Pressable>
 
-                {/*
-                 * Therapist assignment section
-                 */}
-                <View
-                  style={
-                    styles.assignmentBox
-                  }
-                >
-                  <Text
-                    style={
-                      styles.assignmentTitle
-                    }
-                  >
-                    Assigned Therapist(s)
-                  </Text>
+                <View style={styles.assignmentBox}>
+                  <Text style={styles.assignmentTitle}>Assigned Therapist(s)</Text>
 
-                  {client
-                    .therapist_ids
-                    .length === 0 ? (
-                    <Text
-                      style={
-                        styles.muted
-                      }
-                    >
-                      No therapist assigned
-                    </Text>
+                  {client.therapist_ids.length === 0 ? (
+                    <Text style={styles.muted}>No therapist assigned</Text>
                   ) : (
-                    client.therapist_ids.map(
-                      (id) => (
-                        <Text
-                          key={id}
-                          style={
-                            styles.assignedName
-                          }
-                        >
-                          •{" "}
-                          {therapistName(
-                            id
-                          )}
-                        </Text>
-                      )
-                    )
+                    client.therapist_ids.map((id) => (
+                      <Text key={id} style={styles.assignedName}>
+                        • {therapistName(id)}
+                      </Text>
+                    ))
                   )}
 
-                  <View
-                    style={{
-                      height: 9,
-                    }}
-                  />
+                  <View style={{ height: 9 }} />
 
                   <SecondaryButton
-                    title={
-                      isOpen
-                        ? "Close therapist list"
-                        : "Assign Therapist"
-                    }
-                    onPress={() =>
-                      setOpenClientId(
-                        isOpen
-                          ? null
-                          : client.id
-                      )
-                    }
+                    title={isOpen ? "Close therapist list" : "Assign Therapist"}
+                    onPress={() => setOpenClientId(isOpen ? null : client.id)}
                   />
 
                   {isOpen ? (
-                    <View
-                      style={
-                        styles.therapistList
-                      }
-                    >
-                      {therapists.length ===
-                      0 ? (
-                        <Text
-                          style={
-                            styles.muted
-                          }
-                        >
-                          No therapists are
-                          available for
-                          this clinic.
+                    <View style={styles.therapistList}>
+                      {therapists.length === 0 ? (
+                        <Text style={styles.muted}>
+                          No therapists are available for this clinic.
                         </Text>
                       ) : (
-                        therapists.map(
-                          (therapist) => {
-                            const selected =
-                              client.therapist_ids.includes(
-                                therapist.id
-                              );
+                        therapists.map((therapist) => {
+                          const selected = client.therapist_ids.includes(therapist.id);
 
-                            return (
-                              <Pressable
-                                key={
-                                  therapist.id
-                                }
-                                disabled={
-                                  savingId ===
-                                  client.id
-                                }
-                                onPress={() =>
-                                  toggleAssignment(
-                                    client.id,
-                                    therapist.id
-                                  )
-                                }
-                                style={({
-                                  pressed,
-                                }) => [
-                                  styles.therapistOption,
-                                  selected &&
-                                    styles.selectedOption,
-                                  pressed &&
-                                    styles.pressed,
-                                ]}
-                              >
-                                <Text
-                                  style={
-                                    styles.optionName
-                                  }
-                                >
-                                  {selected
-                                    ? "✓ "
-                                    : ""}
-                                  {therapist.full_name ??
-                                    "Therapist"}
-                                </Text>
+                          return (
+                            <Pressable
+                              key={therapist.id}
+                              disabled={savingId === client.id}
+                              onPress={() => toggleAssignment(client.id, therapist.id)}
+                              style={({ pressed }) => [
+                                styles.therapistOption,
+                                selected && styles.selectedOption,
+                                pressed && styles.pressed,
+                              ]}
+                            >
+                              <Text style={styles.optionName}>
+                                {selected ? "✓ " : ""}
+                                {therapist.full_name ?? "Therapist"}
+                              </Text>
 
-                                <Text
-                                  style={
-                                    styles.optionAction
-                                  }
-                                >
-                                  {selected
-                                    ? "Remove"
-                                    : "Assign"}
-                                </Text>
-                              </Pressable>
-                            );
-                          }
-                        )
+                              <Text style={styles.optionAction}>
+                                {selected ? "Remove" : "Assign"}
+                              </Text>
+                            </Pressable>
+                          );
+                        })
                       )}
                     </View>
                   ) : null}
@@ -622,96 +291,66 @@ export default function AdminClients() {
           })
         )}
 
-        <SecondaryButton
-          title="Back"
-          onPress={() =>
-            router.back()
-          }
-        />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingBottom: 34,
-  },
-
+  content: { paddingBottom: 34 },
   clientName: {
     fontFamily: "Georgia",
     fontSize: 18,
     color: COLORS.ink,
     marginBottom: 6,
   },
-
   viewText: {
     fontSize: 13,
     color: COLORS.sageDeep,
     fontWeight: "600",
   },
-
   assignmentBox: {
     marginTop: 16,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor:
-      COLORS.border,
+    borderTopColor: COLORS.border,
   },
-
   assignmentTitle: {
     fontSize: 14,
     fontWeight: "700",
     color: COLORS.ink,
     marginBottom: 7,
   },
-
   assignedName: {
     color: COLORS.inkMid,
     fontSize: 13,
     marginBottom: 3,
   },
-
   therapistList: {
     marginTop: 10,
     gap: 8,
   },
-
   therapistOption: {
     borderWidth: 1,
-    borderColor:
-      COLORS.border,
+    borderColor: COLORS.border,
     borderRadius: 12,
     padding: 12,
     flexDirection: "row",
-    justifyContent:
-      "space-between",
+    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor:
-      COLORS.white,
+    backgroundColor: COLORS.white,
   },
-
-  selectedOption: {
-    borderColor:
-      COLORS.sageDeep,
-  },
-
+  selectedOption: { borderColor: COLORS.sageDeep },
   optionName: {
     color: COLORS.ink,
     fontWeight: "600",
   },
-
   optionAction: {
     color: COLORS.sageDeep,
     fontSize: 12,
     fontWeight: "700",
   },
-
-  muted: {
-    color: COLORS.inkMid,
-  },
-
-  pressed: {
-    opacity: 0.7,
-  },
+  muted: { color: COLORS.inkMid },
+  pressed: { opacity: 0.7 },
 });

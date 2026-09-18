@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  ScrollView,
-  Text,
-  View,
-  Pressable,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import { ScrollView, Text, View, Pressable, StyleSheet, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
@@ -22,91 +15,46 @@ import {
   COLORS,
 } from "@/components/ui";
 
-function ZeroToTenScale({
-  value,
-  onChange,
-}: {
-  value: number | null;
-  onChange: (v: number) => void;
-}) {
+function ZeroToTenScale({ value, onChange }: { value: number | null; onChange: (v: number) => void }) {
   return (
     <View style={styles.scaleRow}>
       {Array.from({ length: 11 }, (_, i) => i).map((n) => (
         <Pressable
           key={n}
           onPress={() => onChange(n)}
-          style={[
-            styles.scaleDot,
-            value === n && styles.scaleDotActive,
-          ]}
+          style={[styles.scaleDot, value === n && styles.scaleDotActive]}
         >
-          <Text
-            style={[
-              styles.scaleText,
-              value === n && styles.scaleTextActive,
-            ]}
-          >
-            {n}
-          </Text>
+          <Text style={[styles.scaleText, value === n && styles.scaleTextActive]}>{n}</Text>
         </Pressable>
       ))}
     </View>
   );
 }
 
-function OneToFiveScale({
-  value,
-  onChange,
-}: {
-  value: number | null;
-  onChange: (v: number) => void;
-}) {
+function OneToFiveScale({ value, onChange }: { value: number | null; onChange: (v: number) => void }) {
   return (
     <View style={styles.scaleRow}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Pressable
           key={n}
           onPress={() => onChange(n)}
-          style={[
-            styles.scaleDotWide,
-            value === n && styles.scaleDotActive,
-          ]}
+          style={[styles.scaleDotWide, value === n && styles.scaleDotActive]}
         >
-          <Text
-            style={[
-              styles.scaleText,
-              value === n && styles.scaleTextActive,
-            ]}
-          >
-            {n}
-          </Text>
+          <Text style={[styles.scaleText, value === n && styles.scaleTextActive]}>{n}</Text>
         </Pressable>
       ))}
     </View>
   );
 }
 
-function YesNoToggle({
-  value,
-  onChange,
-}: {
-  value: boolean | null;
-  onChange: (v: boolean) => void;
-}) {
+function YesNoToggle({ value, onChange }: { value: boolean | null; onChange: (v: boolean) => void }) {
   return (
     <View style={{ flexDirection: "row", gap: 8 }}>
       <View style={{ flex: 1 }}>
-        <SecondaryButton
-          title={value === true ? "✓ Yes" : "Yes"}
-          onPress={() => onChange(true)}
-        />
+        <SecondaryButton title={value === true ? "✓ Yes" : "Yes"} onPress={() => onChange(true)} />
       </View>
-
       <View style={{ flex: 1 }}>
-        <SecondaryButton
-          title={value === false ? "✓ No" : "No"}
-          onPress={() => onChange(false)}
-        />
+        <SecondaryButton title={value === false ? "✓ No" : "No"} onPress={() => onChange(false)} />
       </View>
     </View>
   );
@@ -114,24 +62,17 @@ function YesNoToggle({
 
 export default function Survey() {
   const { profile } = useAuth();
-  const { appointmentId } =
-    useLocalSearchParams<{ appointmentId?: string }>();
+  const { appointmentId } = useLocalSearchParams<{ appointmentId?: string }>();
 
   const [painBefore, setPainBefore] = useState<number | null>(null);
   const [painAfter, setPainAfter] = useState<number | null>(null);
   const [sleepImproved, setSleepImproved] = useState<boolean | null>(null);
   const [stressImproved, setStressImproved] = useState<boolean | null>(null);
-  const [mobilityImproved, setMobilityImproved] = useState<boolean | null>(
-    null
-  );
-  const [communicationRating, setCommunicationRating] =
-    useState<number | null>(null);
-  const [feltListenedTo, setFeltListenedTo] =
-    useState<boolean | null>(null);
-  const [understoodHomeCare, setUnderstoodHomeCare] =
-    useState<boolean | null>(null);
-  const [wouldRecommend, setWouldRecommend] =
-    useState<boolean | null>(null);
+  const [mobilityImproved, setMobilityImproved] = useState<boolean | null>(null);
+  const [communicationRating, setCommunicationRating] = useState<number | null>(null);
+  const [feltListenedTo, setFeltListenedTo] = useState<boolean | null>(null);
+  const [understoodHomeCare, setUnderstoodHomeCare] = useState<boolean | null>(null);
+  const [wouldRecommend, setWouldRecommend] = useState<boolean | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
   const [saving, setSaving] = useState(false);
   const [alreadySubmitted, setAlreadySubmitted] = useState(false);
@@ -147,10 +88,7 @@ export default function Survey() {
       .then(({ data }) => setAlreadySubmitted(!!data));
   }, [appointmentId]);
 
-  const canSubmit =
-    !!appointmentId &&
-    painBefore !== null &&
-    painAfter !== null;
+  const canSubmit = !!appointmentId && painBefore !== null && painAfter !== null;
 
   async function handleSubmit() {
     if (!profile || !appointmentId || !canSubmit) return;
@@ -179,16 +117,9 @@ export default function Survey() {
       return;
     }
 
-    Alert.alert(
-      "Thank you",
-      "Your feedback helps your therapist improve your care.",
-      [
-        {
-          text: "OK",
-          onPress: () => router.replace("/client/appointments"),
-        },
-      ]
-    );
+    Alert.alert("Thank you", "Your feedback helps your therapist improve your care.", [
+      { text: "OK", onPress: () => router.replace("/client/appointments") },
+    ]);
   }
 
   if (!appointmentId) {
@@ -198,23 +129,12 @@ export default function Survey() {
         <Heading>No session selected</Heading>
 
         <Card>
-          <Text
-            style={{
-              color: COLORS.inkMid,
-              lineHeight: 19,
-            }}
-          >
-            Open this survey from a specific completed appointment on your
-            Appointments page — each survey is tied to one session.
+          <Text style={{ color: COLORS.inkMid, lineHeight: 19 }}>
+            Open this survey from a specific completed appointment on your Appointments page — each survey is tied to one session.
           </Text>
         </Card>
 
-        <SecondaryButton
-          title="Go to Appointments"
-          onPress={() =>
-            router.replace("/client/appointments")
-          }
-        />
+        <SecondaryButton title="Go to Appointments" onPress={() => router.replace("/client/appointments")} />
       </Screen>
     );
   }
@@ -231,125 +151,72 @@ export default function Survey() {
           </Text>
         </Card>
 
-        <SecondaryButton
-          title="Back to Appointments"
-          onPress={() =>
-            router.replace("/client/appointments")
-          }
-        />
+        <SecondaryButton title="Back to Appointments" onPress={() => router.replace("/client/appointments")} />
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 34 }}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 34 }}>
         <Eyebrow>How did that session feel?</Eyebrow>
         <Heading>Post-Session Survey</Heading>
 
         <Card>
           <Label>Pain level before session (0–10)</Label>
-          <ZeroToTenScale
-            value={painBefore}
-            onChange={setPainBefore}
-          />
+          <ZeroToTenScale value={painBefore} onChange={setPainBefore} />
         </Card>
 
         <Card>
           <Label>Pain level after session (0–10)</Label>
-          <ZeroToTenScale
-            value={painAfter}
-            onChange={setPainAfter}
-          />
+          <ZeroToTenScale value={painAfter} onChange={setPainAfter} />
         </Card>
 
         <Card>
           <Label>Did your sleep improve?</Label>
-          <YesNoToggle
-            value={sleepImproved}
-            onChange={setSleepImproved}
-          />
+          <YesNoToggle value={sleepImproved} onChange={setSleepImproved} />
         </Card>
 
         <Card>
           <Label>Did your stress level improve?</Label>
-          <YesNoToggle
-            value={stressImproved}
-            onChange={setStressImproved}
-          />
+          <YesNoToggle value={stressImproved} onChange={setStressImproved} />
         </Card>
 
         <Card>
           <Label>Did your range of motion improve?</Label>
-          <YesNoToggle
-            value={mobilityImproved}
-            onChange={setMobilityImproved}
-          />
+          <YesNoToggle value={mobilityImproved} onChange={setMobilityImproved} />
         </Card>
 
         <Card>
           <Label>Rate your therapist's communication (1–5)</Label>
-          <OneToFiveScale
-            value={communicationRating}
-            onChange={setCommunicationRating}
-          />
+          <OneToFiveScale value={communicationRating} onChange={setCommunicationRating} />
         </Card>
 
         <Card>
           <Label>Did you feel listened to?</Label>
-          <YesNoToggle
-            value={feltListenedTo}
-            onChange={setFeltListenedTo}
-          />
+          <YesNoToggle value={feltListenedTo} onChange={setFeltListenedTo} />
         </Card>
 
         <Card>
-          <Label>
-            Did you understand your home-care instructions?
-          </Label>
-          <YesNoToggle
-            value={understoodHomeCare}
-            onChange={setUnderstoodHomeCare}
-          />
+          <Label>Did you understand your home-care instructions?</Label>
+          <YesNoToggle value={understoodHomeCare} onChange={setUnderstoodHomeCare} />
         </Card>
 
         <Card>
           <Label>Would you recommend this therapist?</Label>
-          <YesNoToggle
-            value={wouldRecommend}
-            onChange={setWouldRecommend}
-          />
+          <YesNoToggle value={wouldRecommend} onChange={setWouldRecommend} />
         </Card>
 
         <Card>
-          <Label>
-            Anything your therapist could have done better? (optional)
-          </Label>
-          <FieldInput
-            value={feedbackText}
-            onChangeText={setFeedbackText}
-            multiline
-          />
+          <Label>Anything your therapist could have done better? (optional)</Label>
+          <FieldInput value={feedbackText} onChangeText={setFeedbackText} multiline />
         </Card>
 
-        <PrimaryButton
-          title="Submit Survey"
-          onPress={handleSubmit}
-          loading={saving}
-          disabled={!canSubmit}
-        />
+        <PrimaryButton title="Submit Survey" onPress={handleSubmit} loading={saving} disabled={!canSubmit} />
 
         <View style={{ height: 9 }} />
 
-        <SecondaryButton
-          title="Cancel"
-          onPress={() =>
-            router.replace("/client/appointments")
-          }
-        />
+        <SecondaryButton title="Cancel" onPress={() => router.replace("/client/appointments")} />
       </ScrollView>
     </Screen>
   );
@@ -363,7 +230,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 4,
   },
-
   scaleDot: {
     width: 30,
     height: 30,
@@ -374,7 +240,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
   },
-
   scaleDotWide: {
     width: 44,
     height: 34,
@@ -385,17 +250,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
   },
-
   scaleDotActive: {
     backgroundColor: COLORS.sageDeep,
     borderColor: COLORS.sageDeep,
   },
-
   scaleText: {
     fontSize: 12,
     color: COLORS.inkMid,
   },
-
   scaleTextActive: {
     color: COLORS.white,
     fontWeight: "700",

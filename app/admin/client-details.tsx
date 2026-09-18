@@ -109,7 +109,6 @@ export default function AdminClientDetails() {
 
   const [profile, setProfile] = useState<ClientProfile | null>(null);
   const [client, setClient] = useState<ClientRecord | null>(null);
-
   const [intake, setIntake] = useState<IntakeRecord[]>([]);
   const [health, setHealth] = useState<HealthRecord[]>([]);
   const [consents, setConsents] = useState<ConsentRecord[]>([]);
@@ -119,7 +118,6 @@ export default function AdminClientDetails() {
   const [homeCare, setHomeCare] = useState<HomeCareRecord[]>([]);
   const [surveys, setSurveys] = useState<SurveyRecord[]>([]);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -128,8 +126,6 @@ export default function AdminClientDetails() {
       return;
     }
 
-    // Create a definite string so TypeScript knows this
-    // value cannot be undefined inside loadClient().
     const id = clientId;
 
     async function loadClient() {
@@ -147,11 +143,7 @@ export default function AdminClientDetails() {
         surveyResult,
         photoResult,
       ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, full_name, phone")
-          .eq("id", id)
-          .single(),
+        supabase.from("profiles").select("id, full_name, phone").eq("id", id).single(),
 
         supabase
           .from("clients")
@@ -173,9 +165,7 @@ export default function AdminClientDetails() {
 
         supabase
           .from("consents")
-          .select(
-            "id, document_name, document_version, agreed, agreed_at, created_at"
-          )
+          .select("id, document_name, document_version, agreed, agreed_at, created_at")
           .eq("client_id", id)
           .order("created_at", { ascending: false }),
 
@@ -199,9 +189,7 @@ export default function AdminClientDetails() {
 
         supabase
           .from("surveys")
-          .select(
-            "id, appointment_id, pain_before, pain_after, sleep_improved, stress_improved, mobility_improved, communication_rating, understood_home_care, would_recommend, feedback_text, created_at"
-          )
+          .select("id, appointment_id, pain_before, pain_after, sleep_improved, stress_improved, mobility_improved, communication_rating, understood_home_care, would_recommend, feedback_text, created_at")
           .eq("client_id", id)
           .order("created_at", { ascending: false }),
 
@@ -236,9 +224,7 @@ export default function AdminClientDetails() {
 
         const { data: soapData } = await supabase
           .from("soap_notes")
-          .select(
-            "id, appointment_id, subjective, pain_before, objective, range_of_motion, assessment, plan_next_treatment, plan_home_care, signed_at"
-          )
+          .select("id, appointment_id, subjective, pain_before, objective, range_of_motion, assessment, plan_next_treatment, plan_home_care, signed_at")
           .in("appointment_id", appointmentIds)
           .order("created_at", { ascending: false });
 
@@ -258,68 +244,44 @@ export default function AdminClientDetails() {
       <Screen>
         <Eyebrow>Client records</Eyebrow>
         <Heading>No client selected</Heading>
-
-        <SecondaryButton
-          title="Back"
-          onPress={() => router.back()}
-        />
+        <SecondaryButton title="Back" onPress={() => router.back()} />
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Eyebrow>Clinic workspace</Eyebrow>
-
-        <Heading>
-          {profile?.full_name ?? "Client Details"}
-        </Heading>
+        <Heading>{profile?.full_name ?? "Client Details"}</Heading>
 
         {loading ? (
           <Card>
-            <Text style={styles.muted}>
-              Loading client records...
-            </Text>
+            <Text style={styles.muted}>Loading client records...</Text>
           </Card>
         ) : (
           <>
             <Card>
               <SectionTitle title="Client Information" />
-
               <Info label="Name" value={profile?.full_name} />
               <Info label="Phone" value={profile?.phone} />
-              <Info
-                label="Date of birth"
-                value={client?.date_of_birth}
-              />
-              <Info
-                label="Emergency contact"
-                value={client?.emergency_contact}
-              />
+              <Info label="Date of birth" value={client?.date_of_birth} />
+              <Info label="Emergency contact" value={client?.emergency_contact} />
             </Card>
 
             <Card>
               <SectionTitle title="Intake Forms" />
-
               {intake.length === 0 ? (
                 <Empty />
               ) : (
                 intake.map((record) => (
                   <Record key={record.id}>
-                    <Text style={styles.recordTitle}>
-                      Intake Form
-                    </Text>
-
+                    <Text style={styles.recordTitle}>Intake Form</Text>
                     <Text style={styles.recordText}>
                       {record.submitted_at
                         ? `Submitted: ${formatDate(record.submitted_at)}`
                         : "Not submitted"}
                     </Text>
-
                     <Text style={styles.recordText}>
                       Responses: {JSON.stringify(record.responses)}
                     </Text>
@@ -330,33 +292,14 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Health History" />
-
               {health.length === 0 ? (
                 <Empty />
               ) : (
                 health.map((record) => (
                   <Record key={record.id}>
-                    <Info
-                      label="Conditions"
-                      value={
-                        record.conditions?.join(", ") ||
-                        "None recorded"
-                      }
-                    />
-
-                    <Info
-                      label="Medications"
-                      value={
-                        record.medications?.join(", ") ||
-                        "None recorded"
-                      }
-                    />
-
-                    <Info
-                      label="Notes"
-                      value={record.notes}
-                    />
-
+                    <Info label="Conditions" value={record.conditions?.join(", ") || "None recorded"} />
+                    <Info label="Medications" value={record.medications?.join(", ") || "None recorded"} />
+                    <Info label="Notes" value={record.notes} />
                     <Text style={styles.recordText}>
                       Updated: {formatDate(record.updated_at)}
                     </Text>
@@ -367,24 +310,16 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Consent & Policies" />
-
               {consents.length === 0 ? (
                 <Empty />
               ) : (
                 consents.map((record) => (
                   <Record key={record.id}>
-                    <Text style={styles.recordTitle}>
-                      {record.document_name}
-                    </Text>
-
-                    <Text style={styles.recordText}>
-                      Version: {record.document_version}
-                    </Text>
-
+                    <Text style={styles.recordTitle}>{record.document_name}</Text>
+                    <Text style={styles.recordText}>Version: {record.document_version}</Text>
                     <Text style={styles.recordText}>
                       Status: {record.agreed ? "Agreed" : "Not agreed"}
                     </Text>
-
                     {record.agreed_at && (
                       <Text style={styles.recordText}>
                         Agreed: {formatDate(record.agreed_at)}
@@ -397,23 +332,14 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Appointments" />
-
               {appointments.length === 0 ? (
                 <Empty />
               ) : (
                 appointments.map((record) => (
                   <Record key={record.id}>
-                    <Text style={styles.recordTitle}>
-                      {record.service_name}
-                    </Text>
-
-                    <Text style={styles.recordText}>
-                      {formatDate(record.starts_at)}
-                    </Text>
-
-                    <Text style={styles.recordText}>
-                      Status: {record.status}
-                    </Text>
+                    <Text style={styles.recordTitle}>{record.service_name}</Text>
+                    <Text style={styles.recordText}>{formatDate(record.starts_at)}</Text>
+                    <Text style={styles.recordText}>Status: {record.status}</Text>
                   </Record>
                 ))
               )}
@@ -421,7 +347,6 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="SOAP / Session Notes" />
-
               {soapNotes.length === 0 ? (
                 <Empty />
               ) : (
@@ -429,50 +354,17 @@ export default function AdminClientDetails() {
                   <Record key={record.id}>
                     <Info
                       label="Pain before"
-                      value={
-                        record.pain_before !== null
-                          ? `${record.pain_before}/10`
-                          : null
-                      }
+                      value={record.pain_before !== null ? `${record.pain_before}/10` : null}
                     />
-
-                    <Info
-                      label="Subjective"
-                      value={record.subjective}
-                    />
-
-                    <Info
-                      label="Objective"
-                      value={record.objective}
-                    />
-
-                    <Info
-                      label="Range of motion"
-                      value={record.range_of_motion}
-                    />
-
-                    <Info
-                      label="Assessment"
-                      value={record.assessment}
-                    />
-
-                    <Info
-                      label="Next treatment"
-                      value={record.plan_next_treatment}
-                    />
-
-                    <Info
-                      label="Home care plan"
-                      value={record.plan_home_care}
-                    />
-
+                    <Info label="Subjective" value={record.subjective} />
+                    <Info label="Objective" value={record.objective} />
+                    <Info label="Range of motion" value={record.range_of_motion} />
+                    <Info label="Assessment" value={record.assessment} />
+                    <Info label="Next treatment" value={record.plan_next_treatment} />
+                    <Info label="Home care plan" value={record.plan_home_care} />
                     <Info
                       label="Signed"
-                      value={
-                        record.signed_at
-                          ? formatDate(record.signed_at)
-                          : "Not signed"
-                      }
+                      value={record.signed_at ? formatDate(record.signed_at) : "Not signed"}
                     />
                   </Record>
                 ))
@@ -481,21 +373,15 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Treatment Goals" />
-
               {goals.length === 0 ? (
                 <Empty />
               ) : (
                 goals.map((record) => (
                   <Record key={record.id}>
-                    <Text style={styles.recordTitle}>
-                      {record.goal}
-                    </Text>
-
+                    <Text style={styles.recordTitle}>{record.goal}</Text>
                     <Text style={styles.recordText}>
-                      Status:{" "}
-                      {record.achieved ? "Achieved" : "In progress"}
+                      Status: {record.achieved ? "Achieved" : "In progress"}
                     </Text>
-
                     {record.target_date && (
                       <Text style={styles.recordText}>
                         Target: {record.target_date}
@@ -508,16 +394,12 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Home Care" />
-
               {homeCare.length === 0 ? (
                 <Empty />
               ) : (
                 homeCare.map((record) => (
                   <Record key={record.id}>
-                    <Text style={styles.recordText}>
-                      {record.instructions}
-                    </Text>
-
+                    <Text style={styles.recordText}>{record.instructions}</Text>
                     <Text style={styles.recordText}>
                       Added: {formatDate(record.created_at)}
                     </Text>
@@ -528,7 +410,6 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Session Surveys" />
-
               {surveys.length === 0 ? (
                 <Empty />
               ) : (
@@ -536,37 +417,15 @@ export default function AdminClientDetails() {
                   <Record key={record.id}>
                     <Info
                       label="Pain before"
-                      value={
-                        record.pain_before !== null
-                          ? `${record.pain_before}/10`
-                          : null
-                      }
+                      value={record.pain_before !== null ? `${record.pain_before}/10` : null}
                     />
-
                     <Info
                       label="Pain after"
-                      value={
-                        record.pain_after !== null
-                          ? `${record.pain_after}/10`
-                          : null
-                      }
+                      value={record.pain_after !== null ? `${record.pain_after}/10` : null}
                     />
-
-                    <Info
-                      label="Sleep improved"
-                      value={yesNo(record.sleep_improved)}
-                    />
-
-                    <Info
-                      label="Stress improved"
-                      value={yesNo(record.stress_improved)}
-                    />
-
-                    <Info
-                      label="Mobility improved"
-                      value={yesNo(record.mobility_improved)}
-                    />
-
+                    <Info label="Sleep improved" value={yesNo(record.sleep_improved)} />
+                    <Info label="Stress improved" value={yesNo(record.stress_improved)} />
+                    <Info label="Mobility improved" value={yesNo(record.mobility_improved)} />
                     <Info
                       label="Communication"
                       value={
@@ -575,21 +434,9 @@ export default function AdminClientDetails() {
                           : null
                       }
                     />
-
-                    <Info
-                      label="Understood home care"
-                      value={yesNo(record.understood_home_care)}
-                    />
-
-                    <Info
-                      label="Would recommend"
-                      value={yesNo(record.would_recommend)}
-                    />
-
-                    <Info
-                      label="Feedback"
-                      value={record.feedback_text}
-                    />
+                    <Info label="Understood home care" value={yesNo(record.understood_home_care)} />
+                    <Info label="Would recommend" value={yesNo(record.would_recommend)} />
+                    <Info label="Feedback" value={record.feedback_text} />
                   </Record>
                 ))
               )}
@@ -597,7 +444,6 @@ export default function AdminClientDetails() {
 
             <Card>
               <SectionTitle title="Photos / Progress Records" />
-
               {photos.length === 0 ? (
                 <Empty />
               ) : (
@@ -606,7 +452,6 @@ export default function AdminClientDetails() {
                     <Text style={styles.recordText}>
                       Storage path: {record.storage_path}
                     </Text>
-
                     <Text style={styles.recordText}>
                       Added: {formatDate(record.created_at)}
                     </Text>
@@ -617,10 +462,7 @@ export default function AdminClientDetails() {
           </>
         )}
 
-        <SecondaryButton
-          title="Back to Clients"
-          onPress={() => router.back()}
-        />
+        <SecondaryButton title="Back to Clients" onPress={() => router.back()} />
       </ScrollView>
     </Screen>
   );
@@ -635,26 +477,14 @@ function Record({ children }: { children: React.ReactNode }) {
 }
 
 function Empty() {
-  return (
-    <Text style={styles.muted}>
-      No records available.
-    </Text>
-  );
+  return <Text style={styles.muted}>No records available.</Text>;
 }
 
-function Info({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | null;
-}) {
+function Info({ label, value }: { label: string; value?: string | null }) {
   return (
     <>
       <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>
-        {value || "Not recorded"}
-      </Text>
+      <Text style={styles.value}>{value || "Not recorded"}</Text>
     </>
   );
 }
@@ -673,35 +503,30 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 34,
   },
-
   sectionTitle: {
     fontFamily: "Georgia",
     fontSize: 19,
     color: COLORS.ink,
     marginBottom: 16,
   },
-
   record: {
     paddingBottom: 14,
     marginBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-
   recordTitle: {
     fontSize: 15,
     fontWeight: "700",
     color: COLORS.ink,
     marginBottom: 6,
   },
-
   recordText: {
     fontSize: 14,
     lineHeight: 21,
     color: COLORS.inkMid,
     marginBottom: 6,
   },
-
   label: {
     fontSize: 11,
     fontWeight: "700",
@@ -711,14 +536,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 3,
   },
-
   value: {
     fontSize: 14,
     lineHeight: 21,
     color: COLORS.ink,
     marginBottom: 7,
   },
-
   muted: {
     color: COLORS.inkMid,
     lineHeight: 20,
