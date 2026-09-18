@@ -97,28 +97,33 @@ export default function AdminClients() {
       ]);
 
     if (clientProfilesResult.error) {
-      console.warn("Failed to load client profiles:", clientProfilesResult.error.message);
+      console.warn(
+        "Failed to load client profiles:",
+        clientProfilesResult.error.message
+      );
     }
 
     if (therapistProfilesResult.error) {
-      console.warn("Failed to load therapist profiles:", therapistProfilesResult.error.message);
+      console.warn(
+        "Failed to load therapist profiles:",
+        therapistProfilesResult.error.message
+      );
     }
 
     if (assignmentsResult.error) {
-      console.warn("Failed to load therapist assignments:", assignmentsResult.error.message);
+      console.warn(
+        "Failed to load therapist assignments:",
+        assignmentsResult.error.message
+      );
     }
 
     const validClientProfiles = clientProfilesResult.data ?? [];
-    const validClientIds = new Set(validClientProfiles.map((profile) => profile.id));
-
-    const clientNameById = new Map(
-      validClientProfiles.map((profile) => [profile.id, profile.full_name])
-    );
+    const validClientIds = new Set(validClientProfiles.map((item) => item.id));
 
     const therapistList: TherapistRow[] = (therapistProfilesResult.data ?? []).map(
-      (profile) => ({
-        id: profile.id,
-        full_name: profile.full_name,
+      (item) => ({
+        id: item.id,
+        full_name: item.full_name,
       })
     );
 
@@ -135,10 +140,10 @@ export default function AdminClients() {
     setTherapists(therapistList);
 
     setClients(
-      validClientProfiles.map((profile) => ({
-        id: profile.id,
-        full_name: clientNameById.get(profile.id) ?? null,
-        therapist_ids: assignedByClient.get(profile.id) ?? [],
+      validClientProfiles.map((item) => ({
+        id: item.id,
+        full_name: item.full_name,
+        therapist_ids: assignedByClient.get(item.id) ?? [],
       }))
     );
 
@@ -154,38 +159,71 @@ export default function AdminClients() {
     const alreadyAssigned = client.therapist_ids.includes(therapistId);
     setSavingId(clientId);
 
-    const result = alreadyAssigned
-      ? await supabase
-          .from("client_therapist_assignments")
-          .delete()
-          .eq("client_id", clientId)
-          .eq("therapist_id", therapistId)
-      : await supabase
-          .from("client_therapist_assignments")
-          .insert({
-            client_id: clientId,
-            therapist_id: therapistId,
-          });
+    if (alreadyAssigned) {
+      const { error } = await supabase
+        .from("client_therapist_assignments")
+        .delete()
+        .eq("client_id", clientId)
+        .eq("therapist_id", therapistId);
 
-    if (result.error) {
+      if (error) {
+        setSavingId(null);
+        Alert.alert("Assignment failed", error.message);
+        return;
+      }
+
+      setClients((current) =>
+        current.map((item) =>
+          item.id !== clientId
+            ? item
+            : {
+                ...item,
+                therapist_ids: item.therapist_ids.filter(
+                  (id) => id !== therapistId
+                ),
+              }
+        )
+      );
+
       setSavingId(null);
-      Alert.alert("Assignment failed", result.error.message);
+      return;
+    }
+
+    if (client.therapist_ids.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("client_therapist_assignments")
+        .delete()
+        .eq("client_id", clientId);
+
+      if (deleteError) {
+        setSavingId(null);
+        Alert.alert("Change failed", deleteError.message);
+        return;
+      }
+    }
+
+    const { error: insertError } = await supabase
+      .from("client_therapist_assignments")
+      .insert({
+        client_id: clientId,
+        therapist_id: therapistId,
+      });
+
+    if (insertError) {
+      setSavingId(null);
+      Alert.alert("Assignment failed", insertError.message);
       return;
     }
 
     setClients((current) =>
-      current.map((item) => {
-        if (item.id !== clientId) return item;
-
-        return {
-          ...item,
-          therapist_ids: alreadyAssigned
-            ? item.therapist_ids.filter((id) => id !== therapistId)
-            : [...item.therapist_ids, therapistId],
-        };
-      })
+      current.map((item) =>
+        item.id !== clientId
+          ? item
+          : { ...item, therapist_ids: [therapistId] }
+      )
     );
 
+    setOpenClientId(null);
     setSavingId(null);
   }
 
@@ -198,7 +236,10 @@ export default function AdminClients() {
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
         <Eyebrow>Clinic workspace</Eyebrow>
         <Heading>Clients</Heading>
 
@@ -213,79 +254,115 @@ export default function AdminClients() {
         ) : (
           clients.map((client) => {
             const isOpen = openClientId === client.id;
+            const hasTherapist = client.therapist_ids.length > 0;
 
             return (
               <Card key={client.id}>
-                <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: "/admin/client-details",
-                      params: { clientId: client.id },
-                    })
-                  }
-                >
-                  <Text style={styles.clientName}>
-                    {client.full_name ?? "Client"}
-                  </Text>
-                  <Text style={styles.viewText}>View client records →</Text>
-                </Pressable>
+                <View style={styles.clientHeader}>
+                  <View style={styles.clientInfo}>
+                    <Text style={styles.clientName}>
+                      {(client.full_name ?? "Client").toUpperCase()}
+                    </Text>
 
-                <View style={styles.assignmentBox}>
-                  <Text style={styles.assignmentTitle}>Assigned Therapist(s)</Text>
+                    <Text style={styles.therapistLabel}>THERAPIST</Text>
 
-                  {client.therapist_ids.length === 0 ? (
-                    <Text style={styles.muted}>No therapist assigned</Text>
-                  ) : (
-                    client.therapist_ids.map((id) => (
-                      <Text key={id} style={styles.assignedName}>
-                        • {therapistName(id)}
-                      </Text>
-                    ))
-                  )}
-
-                  <View style={{ height: 9 }} />
-
-                  <SecondaryButton
-                    title={isOpen ? "Close therapist list" : "Assign Therapist"}
-                    onPress={() => setOpenClientId(isOpen ? null : client.id)}
-                  />
-
-                  {isOpen ? (
-                    <View style={styles.therapistList}>
-                      {therapists.length === 0 ? (
-                        <Text style={styles.muted}>
-                          No therapists are available for this clinic.
+                    {hasTherapist ? (
+                      <View style={styles.therapistRow}>
+                        <Text style={styles.assignedName}>
+                          {therapistName(client.therapist_ids[0])}
                         </Text>
-                      ) : (
-                        therapists.map((therapist) => {
-                          const selected = client.therapist_ids.includes(therapist.id);
 
-                          return (
-                            <Pressable
-                              key={therapist.id}
-                              disabled={savingId === client.id}
-                              onPress={() => toggleAssignment(client.id, therapist.id)}
-                              style={({ pressed }) => [
-                                styles.therapistOption,
-                                selected && styles.selectedOption,
-                                pressed && styles.pressed,
-                              ]}
-                            >
-                              <Text style={styles.optionName}>
-                                {selected ? "✓ " : ""}
-                                {therapist.full_name ?? "Therapist"}
-                              </Text>
+                        <Pressable
+                          onPress={() =>
+                            setOpenClientId(isOpen ? null : client.id)
+                          }
+                          disabled={savingId === client.id}
+                        >
+                          <Text style={styles.changeText}>
+                            {isOpen ? "Close" : "Change"}
+                          </Text>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <Text style={styles.muted}>No therapist assigned</Text>
+                    )}
+                  </View>
 
-                              <Text style={styles.optionAction}>
-                                {selected ? "Remove" : "Assign"}
-                              </Text>
-                            </Pressable>
-                          );
-                        })
-                      )}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`View records for ${
+                      client.full_name ?? "client"
+                    }`}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/admin/client-details",
+                        params: { clientId: client.id },
+                      })
+                    }
+                    style={({ pressed }) => [
+                      styles.recordsButton,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={styles.recordsIcon}>
+                      <View style={styles.iconHead} />
+                      <View style={styles.iconBody} />
                     </View>
-                  ) : null}
+                  </Pressable>
                 </View>
+
+                {!hasTherapist ? (
+                  <>
+                    <View style={{ height: 10 }} />
+
+                    <SecondaryButton
+                      title={isOpen ? "Close therapist list" : "Assign Therapist"}
+                      onPress={() =>
+                        setOpenClientId(isOpen ? null : client.id)
+                      }
+                    />
+                  </>
+                ) : null}
+
+                {isOpen ? (
+                  <View style={styles.therapistList}>
+                    {therapists.length === 0 ? (
+                      <Text style={styles.muted}>
+                        No therapists are available for this clinic.
+                      </Text>
+                    ) : (
+                      therapists.map((therapist) => {
+                        const selected = client.therapist_ids.includes(
+                          therapist.id
+                        );
+
+                        return (
+                          <Pressable
+                            key={therapist.id}
+                            disabled={savingId === client.id}
+                            onPress={() =>
+                              toggleAssignment(client.id, therapist.id)
+                            }
+                            style={({ pressed }) => [
+                              styles.therapistOption,
+                              selected && styles.selectedOption,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <Text style={styles.optionName}>
+                              {selected ? "✓ " : ""}
+                              {therapist.full_name ?? "Therapist"}
+                            </Text>
+
+                            <Text style={styles.optionAction}>
+                              {selected ? "Current" : "Change"}
+                            </Text>
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </View>
+                ) : null}
               </Card>
             );
           })
@@ -299,33 +376,74 @@ export default function AdminClients() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: 34 },
+  clientHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  clientInfo: {
+    flex: 1,
+    paddingRight: 10,
+  },
   clientName: {
     fontFamily: "Georgia",
-    fontSize: 18,
-    color: COLORS.ink,
-    marginBottom: 6,
-  },
-  viewText: {
-    fontSize: 13,
-    color: COLORS.sageDeep,
-    fontWeight: "600",
-  },
-  assignmentBox: {
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  assignmentTitle: {
-    fontSize: 14,
+    fontSize: 19,
     fontWeight: "700",
+    letterSpacing: 0.5,
     color: COLORS.ink,
-    marginBottom: 7,
+    marginBottom: 9,
+  },
+  therapistLabel: {
+    color: COLORS.inkMid,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+  therapistRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   assignedName: {
-    color: COLORS.inkMid,
-    fontSize: 13,
-    marginBottom: 3,
+    color: COLORS.sageDeep,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  changeText: {
+    color: COLORS.gold,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  recordsButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.white,
+  },
+  recordsIcon: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconHead: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: COLORS.inkMid,
+    marginBottom: 2,
+  },
+  iconBody: {
+    width: 14,
+    height: 7,
+    borderTopLeftRadius: 7,
+    borderTopRightRadius: 7,
+    backgroundColor: COLORS.inkMid,
   },
   therapistList: {
     marginTop: 10,
@@ -334,14 +452,16 @@ const styles = StyleSheet.create({
   therapistOption: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 10,
+    padding: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: COLORS.white,
   },
-  selectedOption: { borderColor: COLORS.sageDeep },
+  selectedOption: {
+    borderColor: COLORS.sageDeep,
+  },
   optionName: {
     color: COLORS.ink,
     fontWeight: "600",
@@ -351,6 +471,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  muted: { color: COLORS.inkMid },
-  pressed: { opacity: 0.7 },
+  muted: {
+    color: COLORS.inkMid,
+    fontSize: 12,
+  },
+  pressed: {
+    opacity: 0.65,
+  },
 });
