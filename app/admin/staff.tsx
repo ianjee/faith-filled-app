@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import {
+  Alert,
+  ScrollView,
+  Text,
+  View,
+  TextInput,
+  Pressable,
+} from "react-native";
 import { router } from "expo-router";
 
 import { useAuth } from "@/hooks/useAuth";
@@ -45,9 +52,9 @@ function RoleActionRow({
   busy,
 }: RoleActionRowProps) {
   return (
-    <View>
+    <View style={{ marginTop: 8 }}>
       {ASSIGNABLE_ROLES.map((role) => (
-        <View key={role}>
+        <View key={role} style={{ marginBottom: 6 }}>
           <SecondaryButton
             title={role === target.role ? `✓ ${role}` : role}
             onPress={() => {
@@ -61,18 +68,98 @@ function RoleActionRow({
   );
 }
 
+function EditRoleButton({
+  onPress,
+  disabled,
+}: {
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Edit account role"
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        {
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          borderWidth: 1,
+          borderColor: COLORS.border,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: COLORS.white,
+        },
+        pressed && { opacity: 0.6 },
+        disabled && { opacity: 0.4 },
+      ]}
+    >
+      <Text
+        style={{
+          fontSize: 17,
+          color: COLORS.inkMid,
+          lineHeight: 20,
+        }}
+      >
+        ✎
+      </Text>
+    </Pressable>
+  );
+}
+
 export default function ManageStaff() {
   const { profile } = useAuth();
 
   const clinicId: string | null = profile?.clinic_id ?? null;
 
-  const [searchEmail, setSearchEmail] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<
-    StaffProfile | null | undefined
-  >(undefined);
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [showAddTherapist, setShowAddTherapist] =
+    useState(false);
+
+  const [showExistingAccounts, setShowExistingAccounts] =
+    useState(false);
+
+  const [accountSearch, setAccountSearch] = useState("");
+
+  const [allAccounts, setAllAccounts] =
+    useState<StaffProfile[]>([]);
+
+  const [editingRoleId, setEditingRoleId] =
+    useState<string | null>(null);
+
+  const [newTherapist, setNewTherapist] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [creatingTherapist, setCreatingTherapist] =
+    useState(false);
+
+  const loadAllAccounts = useCallback(async () => {
+    if (!clinicId) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, role")
+      .eq("clinic_id", clinicId)
+      .order("full_name", { ascending: true });
+
+    if (error) {
+      Alert.alert(
+        "Unable to load accounts",
+        error.message
+      );
+      return;
+    }
+
+    setAllAccounts((data as StaffProfile[]) ?? []);
+  }, [clinicId]);
 
   const loadStaff = useCallback(async () => {
     if (!clinicId) {
@@ -88,7 +175,10 @@ export default function ManageStaff() {
       .order("role", { ascending: true });
 
     if (error) {
-      Alert.alert("Unable to load staff", error.message);
+      Alert.alert(
+        "Unable to load staff",
+        error.message
+      );
       return;
     }
 
@@ -99,44 +189,14 @@ export default function ManageStaff() {
     loadStaff();
   }, [loadStaff]);
 
-  async function handleSearch() {
-    if (!clinicId) {
-      Alert.alert(
-        "Clinic not assigned",
-        "Your account is not currently assigned to a clinic."
-      );
-      return;
+  useEffect(() => {
+    if (showExistingAccounts) {
+      loadAllAccounts();
     }
-
-    const email = searchEmail.trim().toLowerCase();
-
-    if (!email) {
-      Alert.alert(
-        "Email required",
-        "Please enter the email address used to create the account."
-      );
-      return;
-    }
-
-    setSearching(true);
-    setSearchResult(undefined);
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, role")
-      .eq("clinic_id", clinicId)
-      .eq("email", email)
-      .maybeSingle();
-
-    setSearching(false);
-
-    if (error) {
-      Alert.alert("Search failed", error.message);
-      return;
-    }
-
-    setSearchResult((data as StaffProfile) ?? null);
-  }
+  }, [
+    showExistingAccounts,
+    loadAllAccounts,
+  ]);
 
   async function handleSetRole(
     targetId: string,
@@ -151,9 +211,12 @@ export default function ManageStaff() {
     }
 
     const target =
-      targetId === searchResult?.id
-        ? searchResult
-        : staff.find((item) => item.id === targetId);
+      staff.find(
+        (item) => item.id === targetId
+      ) ??
+      allAccounts.find(
+        (item) => item.id === targetId
+      );
 
     const displayName =
       target?.full_name ??
@@ -181,26 +244,29 @@ export default function ManageStaff() {
 
             if (error) {
               setBusyId(null);
+
               Alert.alert(
                 "Couldn't update role",
                 error.message
               );
+
               return;
             }
 
             if (role === "therapist") {
-              const { error: therapistError } =
-                await supabase
-                  .from("therapists")
-                  .upsert(
-                    {
-                      id: targetId,
-                      clinic_id: clinicId,
-                    },
-                    {
-                      onConflict: "id",
-                    }
-                  );
+              const {
+                error: therapistError,
+              } = await supabase
+                .from("therapists")
+                .upsert(
+                  {
+                    id: targetId,
+                    clinic_id: clinicId,
+                  },
+                  {
+                    onConflict: "id",
+                  }
+                );
 
               if (therapistError) {
                 setBusyId(null);
@@ -215,12 +281,13 @@ export default function ManageStaff() {
             }
 
             if (role !== "therapist") {
-              const { error: therapistDeleteError } =
-                await supabase
-                  .from("therapists")
-                  .delete()
-                  .eq("id", targetId)
-                  .eq("clinic_id", clinicId);
+              const {
+                error: therapistDeleteError,
+              } = await supabase
+                .from("therapists")
+                .delete()
+                .eq("id", targetId)
+                .eq("clinic_id", clinicId);
 
               if (therapistDeleteError) {
                 setBusyId(null);
@@ -235,18 +302,10 @@ export default function ManageStaff() {
             }
 
             setBusyId(null);
-
-            if (
-              searchResult &&
-              targetId === searchResult.id
-            ) {
-              setSearchResult({
-                ...searchResult,
-                role,
-              });
-            }
+            setEditingRoleId(null);
 
             await loadStaff();
+            await loadAllAccounts();
 
             Alert.alert(
               "Done",
@@ -266,8 +325,13 @@ export default function ManageStaff() {
         <Heading>Manage Staff</Heading>
 
         <Card>
-          <Text style={{ color: COLORS.inkMid }}>
-            Your account is not currently assigned to a clinic.
+          <Text
+            style={{
+              color: COLORS.inkMid,
+            }}
+          >
+            Your account is not currently assigned
+            to a clinic.
           </Text>
         </Card>
 
@@ -279,15 +343,113 @@ export default function ManageStaff() {
     );
   }
 
+  const renderAccountCard = (
+    account: StaffProfile
+  ) => {
+    const isEditing =
+      editingRoleId === account.id;
+
+    const isBusy =
+      busyId === account.id;
+
+    return (
+      <Card key={account.id}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              paddingRight: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: "Georgia",
+                fontSize: 16,
+                color: COLORS.ink,
+                marginBottom: 3,
+              }}
+            >
+              {account.full_name ?? "Unnamed"}
+            </Text>
+
+            <Text
+              style={{
+                color: COLORS.inkMid,
+                fontSize: 12,
+                marginBottom: 7,
+              }}
+            >
+              {account.email ?? "No email"}
+            </Text>
+
+            {/* Small role bubble */}
+            <Pill text={account.role} />
+          </View>
+
+          {/* Edit role icon */}
+          <EditRoleButton
+            onPress={() =>
+              setEditingRoleId(
+                isEditing
+                  ? null
+                  : account.id
+              )
+            }
+            disabled={isBusy}
+          />
+        </View>
+
+        {isEditing ? (
+          <View
+            style={{
+              marginTop: 12,
+              paddingTop: 10,
+              borderTopWidth: 1,
+              borderTopColor: COLORS.border,
+            }}
+          >
+            <Text
+              style={{
+                color: COLORS.inkMid,
+                fontSize: 12,
+                marginBottom: 7,
+              }}
+            >
+              Change role
+            </Text>
+
+            <RoleActionRow
+              target={account}
+              onSetRole={handleSetRole}
+              busy={isBusy}
+            />
+          </View>
+        ) : null}
+      </Card>
+    );
+  };
+
   return (
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 34 }}
+        contentContainerStyle={{
+          paddingBottom: 34,
+        }}
       >
-        <Eyebrow>Clinic workspace</Eyebrow>
+        <Eyebrow>
+          Clinic workspace
+        </Eyebrow>
 
-        <Heading>Manage Staff</Heading>
+        <Heading>
+          Manage Staff
+        </Heading>
 
         <Text
           style={{
@@ -296,73 +458,252 @@ export default function ManageStaff() {
             marginBottom: 12,
           }}
         >
-          Look someone up by the email they signed up
-          with, then set their role. They must have
-          created an account already.
+          Add a new therapist or manage an existing
+          account in your clinic.
         </Text>
 
-        <Card>
-          <Label>Find a person by email</Label>
+        <PrimaryButton
+          title="+ Add Therapist"
+          onPress={() => {
+            setShowAddTherapist(
+              !showAddTherapist
+            );
+            setShowExistingAccounts(false);
+            setEditingRoleId(null);
+          }}
+        />
 
-          <FieldInput
-            value={searchEmail}
-            onChangeText={setSearchEmail}
-            placeholder="person@example.com"
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
+        <View style={{ height: 10 }} />
 
-          <PrimaryButton
-            title="Search"
-            onPress={() => {
-              if (!searchEmail.trim() || searching) return;
-              handleSearch();
-            }}
-            loading={searching}
-          />
-        </Card>
+        <SecondaryButton
+          title="Existing Account"
+          onPress={() => {
+            setShowExistingAccounts(
+              !showExistingAccounts
+            );
+            setShowAddTherapist(false);
+            setEditingRoleId(null);
+          }}
+        />
 
-        {searchResult === null ? (
+        {showAddTherapist ? (
           <Card>
-            <Text style={{ color: COLORS.inkMid }}>
-              No account found with that email in your
-              clinic. Ask them to sign up first.
-            </Text>
+            <Eyebrow>
+              New therapist
+            </Eyebrow>
+
+            <Label>
+              Full name
+            </Label>
+
+            <FieldInput
+              value={newTherapist.full_name}
+              onChangeText={(v) =>
+                setNewTherapist({
+                  ...newTherapist,
+                  full_name: v,
+                })
+              }
+              placeholder="Therapist name"
+            />
+
+            <Label>
+              Email
+            </Label>
+
+            <FieldInput
+              value={newTherapist.email}
+              onChangeText={(v) =>
+                setNewTherapist({
+                  ...newTherapist,
+                  email: v,
+                })
+              }
+              placeholder="therapist@example.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+
+            <Label>
+              Password
+            </Label>
+
+            <FieldInput
+              value={newTherapist.password}
+              onChangeText={(v) =>
+                setNewTherapist({
+                  ...newTherapist,
+                  password: v,
+                })
+              }
+              placeholder="Create password"
+              secureTextEntry
+            />
+
+            <Label>
+              Confirm password
+            </Label>
+
+            <FieldInput
+              value={
+                newTherapist.confirmPassword
+              }
+              onChangeText={(v) =>
+                setNewTherapist({
+                  ...newTherapist,
+                  confirmPassword: v,
+                })
+              }
+              placeholder="Confirm password"
+              secureTextEntry
+            />
+
+            <PrimaryButton
+              title="Create Therapist"
+              loading={
+                creatingTherapist
+              }
+              onPress={async () => {
+                if (
+                  !newTherapist.full_name.trim() ||
+                  !newTherapist.email.trim() ||
+                  !newTherapist.password
+                ) {
+                  Alert.alert(
+                    "Missing information",
+                    "Please complete all fields."
+                  );
+
+                  return;
+                }
+
+                if (
+                  newTherapist.password.length <
+                    6 ||
+                  newTherapist.password !==
+                    newTherapist.confirmPassword
+                ) {
+                  Alert.alert(
+                    "Invalid password",
+                    "Use at least 6 characters and make sure both passwords match."
+                  );
+
+                  return;
+                }
+
+                setCreatingTherapist(
+                  true
+                );
+
+                const {
+                  data,
+                  error,
+                } =
+                  await supabase.functions.invoke(
+                    "create-therapist",
+                    {
+                      body: {
+                        full_name:
+                          newTherapist.full_name.trim(),
+
+                        email:
+                          newTherapist.email
+                            .trim()
+                            .toLowerCase(),
+
+                        password:
+                          newTherapist.password,
+
+                        clinic_id:
+                          clinicId,
+                      },
+                    }
+                  );
+
+                setCreatingTherapist(
+                  false
+                );
+
+                if (
+                  error ||
+                  data?.error
+                ) {
+                  Alert.alert(
+                    "Couldn't create therapist",
+                    error?.message ??
+                      data?.error
+                  );
+
+                  return;
+                }
+
+                setNewTherapist({
+                  full_name: "",
+                  email: "",
+                  password: "",
+                  confirmPassword: "",
+                });
+
+                setShowAddTherapist(
+                  false
+                );
+
+                await loadStaff();
+                await loadAllAccounts();
+
+                Alert.alert(
+                  "Therapist created",
+                  "The therapist account was created successfully."
+                );
+              }}
+            />
           </Card>
         ) : null}
 
-        {searchResult ? (
+        {showExistingAccounts ? (
           <Card>
-            <Text
+            <Eyebrow>
+              Existing accounts
+            </Eyebrow>
+
+            <TextInput
+              value={accountSearch}
+              onChangeText={
+                setAccountSearch
+              }
+              placeholder="Search by name or email"
+              autoCapitalize="none"
               style={{
-                fontFamily: "Georgia",
-                fontSize: 17,
+                borderWidth: 1,
+                borderColor:
+                  COLORS.border,
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 12,
                 color: COLORS.ink,
-                marginBottom: 2,
               }}
-            >
-              {searchResult.full_name ?? "Unnamed"}
-            </Text>
-
-            <Text
-              style={{
-                color: COLORS.inkMid,
-                fontSize: 12,
-                marginBottom: 6,
-              }}
-            >
-              {searchResult.email ?? "No email"}
-            </Text>
-
-            <Pill
-              text={`Currently: ${searchResult.role}`}
             />
 
-            <RoleActionRow
-              target={searchResult}
-              onSetRole={handleSetRole}
-              busy={busyId === searchResult.id}
-            />
+            {allAccounts
+              .filter((account) => {
+                const q =
+                  accountSearch
+                    .trim()
+                    .toLowerCase();
+
+                return (
+                  !q ||
+                  account.full_name
+                    ?.toLowerCase()
+                    .includes(q) ||
+                  account.email
+                    ?.toLowerCase()
+                    .includes(q)
+                );
+              })
+              .map(
+                renderAccountCard
+              )}
           </Card>
         ) : null}
 
@@ -372,55 +713,38 @@ export default function ManageStaff() {
             marginBottom: 4,
           }}
         >
-          <Eyebrow>Current staff</Eyebrow>
+          <Eyebrow>
+            Current staff
+          </Eyebrow>
         </View>
 
         {staff.length === 0 ? (
           <Card>
-            <Text style={{ color: COLORS.inkMid }}>
-              No admins, owners, or therapists on file yet.
+            <Text
+              style={{
+                color:
+                  COLORS.inkMid,
+              }}
+            >
+              No admins, owners, or
+              therapists on file yet.
             </Text>
           </Card>
         ) : (
-          staff.map((member) => (
-            <Card key={member.id}>
-              <Text
-                style={{
-                  fontFamily: "Georgia",
-                  fontSize: 16,
-                  color: COLORS.ink,
-                  marginBottom: 2,
-                }}
-              >
-                {member.full_name ?? "Unnamed"}
-              </Text>
-
-              <Text
-                style={{
-                  color: COLORS.inkMid,
-                  fontSize: 12,
-                  marginBottom: 6,
-                }}
-              >
-                {member.email ?? "No email"}
-              </Text>
-
-              <Pill text={member.role} />
-
-              <RoleActionRow
-                target={member}
-                onSetRole={handleSetRole}
-                busy={busyId === member.id}
-              />
-            </Card>
-          ))
+          staff.map(
+            renderAccountCard
+          )
         )}
 
-        <View style={{ height: 4 }} />
+        <View
+          style={{ height: 4 }}
+        />
 
         <SecondaryButton
           title="Back"
-          onPress={() => router.back()}
+          onPress={() =>
+            router.back()
+          }
         />
       </ScrollView>
     </Screen>
