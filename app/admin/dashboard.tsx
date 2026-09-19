@@ -29,12 +29,13 @@ export default function AdminDashboard() {
       return;
     }
 
-    const clinicId = profile.clinic_id;
+    const clinicId: string = profile.clinic_id;
+
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
-    async function loadMetrics() {
+    const loadMetrics = async () => {
       const [clientResult, therapistResult, sessionsResult] = await Promise.all([
         supabase
           .from("profiles")
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
         therapistCount: therapistResult.count ?? 0,
         sessionsThisMonth: sessionsResult.count ?? 0,
       });
-    }
+    };
 
     loadMetrics();
   }, [profile?.clinic_id]);
@@ -80,12 +81,10 @@ export default function AdminDashboard() {
   async function handleSignOut() {
     try {
       await signOut();
+      router.replace("/(auth)/login");
     } catch (err: any) {
       Alert.alert("Sign out failed", err?.message ?? "Please try again.");
-      return;
     }
-
-    router.replace("/(auth)/login");
   }
 
   return (
@@ -94,6 +93,7 @@ export default function AdminDashboard() {
       contentContainerStyle={{
         padding: 22,
         paddingTop: 50,
+        paddingBottom: 34,
         backgroundColor: COLORS.cream,
         flexGrow: 1,
       }}
@@ -108,19 +108,58 @@ export default function AdminDashboard() {
       </View>
 
       <Eyebrow>Manage</Eyebrow>
+
       <Card>
-        <Text style={{ fontFamily: "Georgia", fontSize: 19, color: COLORS.ink, marginBottom: 6 }}>
+        <Text
+          style={{
+            fontFamily: "Georgia",
+            fontSize: 19,
+            color: COLORS.ink,
+            marginBottom: 6,
+          }}
+        >
           Clinic Management
         </Text>
-        <PrimaryButton title="View clients" onPress={() => router.push("/admin/clients")} />
+
+        <PrimaryButton
+          title="View clients"
+          onPress={() => router.push("/admin/clients")}
+        />
+
         <View style={{ height: 9 }} />
-        <PrimaryButton title="View therapists" onPress={() => router.push("/admin/therapists")} />
+
+        <PrimaryButton
+          title="View therapists"
+          onPress={() => router.push("/admin/therapists")}
+        />
+
         <View style={{ height: 9 }} />
-        <PrimaryButton title="Manage Staff" onPress={() => router.push("/admin/staff")} />
+
+        <PrimaryButton
+          title="Appointments"
+          onPress={() => router.push("/admin/appointments")}
+        />
+
         <View style={{ height: 9 }} />
-        <PrimaryButton title="Reports" onPress={() => router.push("/admin/reports")} />
+
+        <PrimaryButton
+          title="Manage Staff"
+          onPress={() => router.push("/admin/staff")}
+        />
+
         <View style={{ height: 9 }} />
-        <SecondaryButton title="Settings" onPress={() => router.push("/admin/settings")} />
+
+        <PrimaryButton
+          title="Reports"
+          onPress={() => router.push("/admin/reports")}
+        />
+
+        <View style={{ height: 9 }} />
+
+        <SecondaryButton
+          title="Settings"
+          onPress={() => router.push("/admin/settings")}
+        />
       </Card>
 
       <SecondaryButton title="Sign out" onPress={handleSignOut} />
